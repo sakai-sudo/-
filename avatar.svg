@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="フラットアバターアイコン">
+  <!-- やさしい単色背景（淡いブルー） -->
+  <rect width="512" height="512" fill="#cfe6f2"/>
+  <circle cx="256" cy="252" r="190" fill="#bcdcee"/>
+
+  <!-- 太めの輪郭線・少ない色数・平面塗りで構成 -->
+  <g stroke="#2b2b2b" stroke-width="9" stroke-linejoin="round" stroke-linecap="round">
+
+    <!-- 肩・グレーのジャケット -->
+    <path d="M112 512
+             C112 432 168 392 210 378
+             L302 378
+             C344 392 400 432 400 512 Z"
+          fill="#9aa1a8"/>
+    <!-- ジャケットの襟（左右） -->
+    <path d="M210 378 L256 470 L232 384 Z" fill="#868d94"/>
+    <path d="M302 378 L256 470 L280 384 Z" fill="#868d94"/>
+    <!-- ネイビーのインナー -->
+    <path d="M232 384 L256 470 L280 384
+             C272 408 240 408 232 384 Z"
+          fill="#26344f"/>
+
+    <!-- 首 -->
+    <path d="M226 350 L226 392 C240 408 272 408 286 392 L286 350 Z" fill="#f0c2a0"/>
+
+    <!-- 顔 -->
+    <path d="M180 232
+             C180 150 332 150 332 232
+             C332 312 300 350 256 350
+             C212 350 180 312 180 232 Z"
+          fill="#f6cda8"/>
+
+    <!-- 耳 -->
+    <circle cx="178" cy="262" r="16" fill="#f0c2a0"/>
+    <circle cx="334" cy="262" r="16" fill="#f0c2a0"/>
+
+    <!-- 黒髪の短髪（自然に流したスタイル・前髪を下ろす） -->
+    <path d="M174 244
+             C150 150 206 92 268 96
+             C328 100 352 150 342 230
+             C338 206 326 192 308 190
+             C312 168 300 152 280 150
+             C300 172 296 200 286 214
+             C284 188 274 176 256 174
+             C246 196 224 210 200 214
+             C196 226 184 236 174 244 Z"
+          fill="#1f1f24"/>
+    <!-- 前髪の流れ（サイドに流す） -->
+    <path d="M200 214 C214 184 250 168 280 150 C262 178 240 198 210 220 Z"
+          fill="#15151a" stroke="none"/>
+
+    <!-- 眉 -->
+    <path d="M206 252 C218 244 236 244 246 250" fill="none" stroke-width="8"/>
+    <path d="M266 250 C278 244 296 244 306 252" fill="none" stroke-width="8"/>
+
+    <!-- 透明フレームのメガネ -->
+    <g fill="#ffffff" fill-opacity="0.35" stroke-width="8">
+      <rect x="196" y="262" width="52" height="44" rx="18"/>
+      <rect x="264" y="262" width="52" height="44" rx="18"/>
+    </g>
+    <path d="M248 282 L264 282" fill="none" stroke-width="8"/>
+    <path d="M196 276 L176 270" fill="none" stroke-width="8"/>
+    <path d="M316 276 L336 270" fill="none" stroke-width="8"/>
+
+    <!-- 目（笑顔のやさしい目） -->
+    <path d="M212 286 C218 280 232 280 238 286" fill="none" stroke-width="9"/>
+    <path d="M274 286 C280 280 294 280 300 286" fill="none" stroke-width="9"/>
+
+    <!-- 鼻 -->
+    <path d="M256 296 L250 318 C254 322 262 322 266 318" fill="none" stroke-width="7"/>
+
+    <!-- 明るい笑顔の口 -->
+    <path d="M226 326 C244 350 268 350 286 326 C270 338 242 338 226 326 Z"
+          fill="#ffffff"/>
+  </g>
+</svg>
