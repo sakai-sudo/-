@@ -1,0 +1,4 @@
+﻿Campaign,Ad Group(既存の各AG名に置換・新AGには入れない),Keyword,Match Type,Keyword Type
+カメラ買取,（既存AG①）,キタムラ,Phrase,Negative
+カメラ買取,（既存AG①）,カメラのキタムラ,Phrase,Negative
+カメラ買取,（既存AG②…全既存AGに同様）,キタムラ,Phrase,Negative

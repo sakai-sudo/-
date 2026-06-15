@@ -1,0 +1,20 @@
+﻿Campaign,Ad Group,Keyword,Match Type,Keyword Type
+カメラ買取,競合_カメラのキタムラ,カメラのキタムラ 買取,Exact,Positive
+カメラ買取,競合_カメラのキタムラ,カメラのキタムラ 下取り,Exact,Positive
+カメラ買取,競合_カメラのキタムラ,カメラのキタムラ 査定,Exact,Positive
+カメラ買取,競合_カメラのキタムラ,キタムラ カメラ 買取,Exact,Positive
+カメラ買取,競合_カメラのキタムラ,キタムラ 下取り,Exact,Positive
+カメラ買取,競合_カメラのキタムラ,カメラのキタムラ 買取,Phrase,Positive
+カメラ買取,競合_カメラのキタムラ,キタムラ 買取,Phrase,Positive
+カメラ買取,競合_カメラのキタムラ,横浜,Phrase,Negative(このAGに追加)
+カメラ買取,競合_カメラのキタムラ,北上,Phrase,Negative(このAGに追加)
+カメラ買取,競合_カメラのキタムラ,店舗,Phrase,Negative(このAGに追加)
+カメラ買取,競合_カメラのキタムラ,営業時間,Phrase,Negative(このAGに追加)
+カメラ買取,競合_カメラのキタムラ,予約,Phrase,Negative(このAGに追加)
+カメラ買取,競合_カメラのキタムラ,チラシ,Phrase,Negative(このAGに追加)
+カメラ買取,競合_カメラのキタムラ,プリント,Phrase,Negative(このAGに追加)
+カメラ買取,競合_カメラのキタムラ,修理,Phrase,Negative(このAGに追加)
+カメラ買取,競合_カメラのキタムラ,中古,Phrase,Negative(このAGに追加)
+カメラ買取,競合_カメラのキタムラ,価格,Phrase,Negative(このAGに追加)
+カメラ買取,競合_カメラのキタムラ,ネットショップ,Phrase,Negative(このAGに追加)
+カメラ買取,競合_カメラのキタムラ,アプリ,Phrase,Negative(このAGに追加)
