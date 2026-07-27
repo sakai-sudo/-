@@ -149,10 +149,44 @@
   .pos .pl { text-align:right; font-size:11.5px; font-weight:700; }
   .empty { text-align:center; color:var(--ink-3); font-size:12.5px; padding:14px 18px 6px; }
 
+  /* ---- auto-trade (bot) history ---- */
+  .log { padding:0 12px 8px; display:flex; flex-direction:column; gap:5px; }
+  .logrow { display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:center;
+        background:var(--surface); border:1px solid var(--line-soft); border-radius:9px; padding:7px 11px; }
+  .logrow .tag { font-size:10px; font-weight:800; padding:2px 6px; border-radius:6px; letter-spacing:.02em; }
+  .logrow .tag.buy  { color:var(--up);   background:var(--up-soft); }
+  .logrow .tag.sell { color:var(--down); background:var(--down-soft); }
+  .logrow .txt { font-size:11.5px; color:var(--ink-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .logrow .txt b { color:var(--ink); font-weight:700; }
+  .logrow .amt { font-size:11.5px; font-weight:800; }
+  .logrow .bot { font-size:9px; color:var(--accent-ink); font-weight:800; margin-left:5px; }
+  .realized { font-weight:800; }
+
   /* ============ 下部 売買ツール (the hero) ============ */
   .trader { flex:0 0 auto; background:var(--surface); border-top:1px solid var(--line);
             box-shadow:var(--shadow-up); padding:12px 16px calc(12px + env(safe-area-inset-bottom));
             display:flex; flex-direction:column; gap:11px; }
+
+  /* auto-trade switch bar */
+  .auto-bar { display:flex; align-items:center; justify-content:space-between;
+        background:var(--surface-2); border:1px solid var(--line); border-radius:11px; padding:9px 12px; }
+  .auto-left { display:flex; align-items:center; gap:9px; font-size:13px; font-weight:800; }
+  .auto-dot { width:8px; height:8px; border-radius:50%; background:var(--ink-3); flex:0 0 auto; }
+  .auto-on .auto-dot { background:var(--accent); box-shadow:0 0 0 0 var(--accent); animation:pulse 1.6s infinite; }
+  @keyframes pulse { 0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 60%,transparent);} 70%{box-shadow:0 0 0 7px transparent;} 100%{box-shadow:0 0 0 0 transparent;} }
+  .auto-state { font-size:10.5px; font-weight:700; color:var(--ink-3); }
+  .auto-on .auto-state { color:var(--accent-ink); }
+  .auto-desc { font-size:10px; color:var(--ink-3); font-weight:600; margin-top:2px; }
+  .switch { position:relative; width:48px; height:28px; flex:0 0 auto; cursor:pointer; }
+  .switch input { position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer; }
+  .switch .track { position:absolute; inset:0; background:var(--line); border-radius:999px; transition:.2s; }
+  .switch .knob { position:absolute; top:3px; left:3px; width:22px; height:22px; border-radius:50%;
+        background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.3); transition:.2s; }
+  .switch input:checked ~ .track { background:var(--accent); }
+  .switch input:checked ~ .knob { transform:translateX(20px); }
+  .switch input:focus-visible ~ .track { outline:2px solid var(--accent-ink); outline-offset:2px; }
+  .trader.locked .side-toggle, .trader.locked .qty-row, .trader.locked .presets,
+  .trader.locked .execute { opacity:.45; pointer-events:none; }
   .side-toggle { display:grid; grid-template-columns:1fr 1fr; gap:0; background:var(--surface-2);
         border:1px solid var(--line); border-radius:11px; padding:3px; }
   .side-toggle button { border:0; background:transparent; color:var(--ink-2); font:inherit;
@@ -252,11 +286,25 @@
     <div class="section-h"><span>保有銘柄</span><span id="hold-count"></span></div>
     <div class="holdings" id="holdings"></div>
     <div class="empty" id="hold-empty">まだ保有銘柄はありません。下の売買ツールから注文しましょう。</div>
+
+    <div class="section-h"><span>取引履歴</span><span class="realized num" id="realized">実現損益 ¥0</span></div>
+    <div class="log" id="log"></div>
+    <div class="empty" id="log-empty">取引履歴はまだありません。</div>
     <div style="height:8px"></div>
   </div>
 
   <!-- ============ 下部 売買ツール ============ -->
-  <div class="trader">
+  <div class="trader" id="trader">
+    <div class="auto-bar" id="auto-bar">
+      <div>
+        <div class="auto-left"><span class="auto-dot"></span>自動売買 <span class="auto-state" id="auto-state">停止中</span></div>
+        <div class="auto-desc">押し目買い＋利確/損切りで5銘柄を自動運用</div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="auto-toggle" aria-label="自動売買">
+        <span class="track"></span><span class="knob"></span>
+      </label>
+    </div>
     <div class="side-toggle" id="side">
       <button data-side="buy" class="buy-on">買い</button>
       <button data-side="sell">売り</button>
@@ -288,8 +336,12 @@
   "use strict";
   const yen = n => "¥" + Math.round(n).toLocaleString("ja-JP");
   const fmt = n => Math.round(n).toLocaleString("ja-JP");
-  const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+  const syen = n => (n>=0?"+":"−") + "¥" + fmt(Math.abs(n));
+  const avg = a => a.reduce((x,y)=>x+y,0)/a.length;
   const START_CASH = 100000;
+
+  // auto-trade (bot) strategy config
+  const BOT = { budget:25000, buyDip:0.010, takeProfit:0.020, stopLoss:0.030, maN:20, cooldown:5 };
 
   // ---- Mock universe (fictional names/codes; prices chosen for a ¥100,000 wallet) ----
   const SEED = [
@@ -313,6 +365,9 @@
 
   let sel = 0, side = "buy", rangeN = 120;
   let cash = START_CASH;
+  let autoOn = false, realizedTotal = 0;
+  const trades = [];                 // {side,code,name,qty,price,amount,realized,bot}
+  const cooldown = {};               // per-code tick cooldown for the bot
   // positions keyed by code: {shares, avg}
   const pos = Object.fromEntries(stocks.map(s => [s.code, {shares:0, avg:0}]));
 
@@ -389,6 +444,25 @@
         `<div class="pl num" style="color:${col}">${pl>=0?'+':''}${fmt(pl)} (${pl>=0?'+':''}${plP.toFixed(2)}%)</div>`;
       host.appendChild(el);
     });
+  }
+
+  function renderLog(){
+    const host = $("log"); host.innerHTML = "";
+    $("log-empty").style.display = trades.length ? "none":"block";
+    trades.forEach(t => {
+      const el = document.createElement("div"); el.className = "logrow";
+      const right = t.realized==null
+        ? `<span class="amt num">${yen(t.amount)}</span>`
+        : `<span class="amt num" style="color:${t.realized>=0?'var(--up)':'var(--down)'}">${syen(t.realized)}</span>`;
+      el.innerHTML =
+        `<span class="tag ${t.side}">${t.side==='buy'?'買':'売'}</span>`+
+        `<span class="txt"><b>${t.name}</b> ${fmt(t.qty)}株 @${fmt(t.price)}${t.bot?'<span class="bot">BOT</span>':''}</span>`+
+        right;
+      host.appendChild(el);
+    });
+    const rt = $("realized");
+    rt.textContent = `実現損益 ${syen(realizedTotal)}`;
+    rt.style.color = realizedTotal===0 ? "var(--ink-3)" : realizedTotal>0 ? "var(--up)":"var(--down)";
   }
 
   // ---------- Chart ----------
@@ -477,28 +551,69 @@
     clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove("show"), 2200);
   }
 
-  function execute(){
-    const s = stocks[sel], p = pos[s.code];
-    const q = Math.max(0, parseInt($("qty").value)||0);
-    if (q<=0) return;
-    if (side==="buy"){
+  // shared trade core — used by manual button and the bot. No rendering/toast here.
+  function trade(s, sd, q, byBot){
+    const p = pos[s.code];
+    q = Math.max(0, Math.floor(q));
+    if (q<=0) return { ok:false, warn:"数量が不正です" };
+    if (sd==="buy"){
       const cost = q*s.price;
-      if (cost>cash){ toast("現金が不足しています", true); return; }
+      if (cost > cash+1e-6) return { ok:false, warn:"現金が不足しています" };
       p.avg = (p.shares*p.avg + cost)/(p.shares+q);
       p.shares += q; cash -= cost;
-      toast(`${s.name} を ${fmt(q)}株 買付 · ${yen(cost)}`);
+      trades.unshift({ side:"buy", code:s.code, name:s.name, qty:q, price:s.price, amount:cost, realized:null, bot:!!byBot });
+      if (trades.length>40) trades.pop();
+      return { ok:true, msg:`${byBot?"🤖 ":""}${s.name} を ${fmt(q)}株 買付 · ${yen(cost)}` };
     } else {
-      if (q>p.shares){ toast("保有株数が不足しています", true); return; }
-      const proceeds = q*s.price, realized = (s.price-p.avg)*q;
-      p.shares -= q; cash += proceeds;
+      if (q > p.shares) return { ok:false, warn:"保有株数が不足しています" };
+      const proceeds = q*s.price, r = (s.price-p.avg)*q;
+      p.shares -= q; cash += proceeds; realizedTotal += r;
       if (p.shares===0) p.avg=0;
-      toast(`${s.name} を ${fmt(q)}株 売却 · 損益 ${realized>=0?'+':''}${yen(realized)}`);
+      trades.unshift({ side:"sell", code:s.code, name:s.name, qty:q, price:s.price, amount:proceeds, realized:r, bot:!!byBot });
+      if (trades.length>40) trades.pop();
+      return { ok:true, msg:`${byBot?"🤖 ":""}${s.name} を ${fmt(q)}株 売却 · 損益 ${syen(r)}` };
     }
+  }
+
+  function execute(){
+    const s = stocks[sel];
+    const q = Math.max(0, parseInt($("qty").value)||0);
+    const r = trade(s, side, q, false);
+    if (!r.ok){ toast(r.warn, true); return; }
+    toast(r.msg);
     renderAll();
   }
 
+  // one evaluation pass of the auto-trade strategy across all stocks
+  function botStep(){
+    let acted = null;
+    for (const s of stocks){
+      if (cooldown[s.code] > 0){ cooldown[s.code]--; continue; }
+      const p = pos[s.code];
+      const ma = avg(s.hist.slice(-BOT.maN));
+      // exit: take-profit or stop-loss on an open position
+      if (p.shares > 0){
+        const ret = (s.price - p.avg)/p.avg;
+        if (ret >= BOT.takeProfit || ret <= -BOT.stopLoss){
+          const r = trade(s, "sell", p.shares, true);
+          if (r.ok){ cooldown[s.code] = BOT.cooldown; acted = r; }
+          continue;
+        }
+      }
+      // entry: buy the dip when price is below its moving average and flat
+      if (p.shares === 0 && s.price < ma*(1-BOT.buyDip)){
+        const qty = Math.floor(Math.min(BOT.budget, cash)/s.price);
+        if (qty > 0){
+          const r = trade(s, "buy", qty, true);
+          if (r.ok){ cooldown[s.code] = BOT.cooldown; acted = r; }
+        }
+      }
+    }
+    if (acted) toast(acted.msg);
+  }
+
   function renderAll(flash){
-    renderTickers(); renderQuote(flash); renderAccount(); renderHoldings();
+    renderTickers(); renderQuote(flash); renderAccount(); renderHoldings(); renderLog();
     sizeCanvas(); drawChart(); updateEstimate();
   }
 
@@ -510,9 +625,10 @@
       s.hist.push(s.price); if (s.hist.length>HIST) s.hist.shift();
       s.high = Math.max(s.high, s.price); s.low = Math.min(s.low, s.price);
     });
+    if (autoOn) botStep();
     const s = stocks[sel];
     const flash = s.hist[s.hist.length-1] - s.hist[s.hist.length-2];
-    renderTickers(); renderQuote(flash>0?1:flash<0?-1:0); renderAccount(); renderHoldings();
+    renderTickers(); renderQuote(flash>0?1:flash<0?-1:0); renderAccount(); renderHoldings(); renderLog();
     drawChart(); updateEstimate();
   }
 
@@ -527,6 +643,13 @@
     updateEstimate();
   });
   $("execute").onclick = execute;
+  $("auto-toggle").addEventListener("change", e => {
+    autoOn = e.target.checked;
+    $("auto-bar").classList.toggle("auto-on", autoOn);
+    $("trader").classList.toggle("locked", autoOn);
+    $("auto-state").textContent = autoOn ? "稼働中" : "停止中";
+    toast(autoOn ? "自動売買を開始しました" : "自動売買を停止しました");
+  });
   $("ranges").addEventListener("click", e => {
     const b=e.target.closest("button"); if(!b) return;
     rangeN = parseInt(b.dataset.n);
@@ -534,9 +657,11 @@
     sizeCanvas(); drawChart();
   });
   $("reset").onclick = () => {
-    cash = START_CASH;
-    stocks.forEach(s => pos[s.code] = pos[s.code]);
-    Object.keys(pos).forEach(k => { pos[k]={shares:0,avg:0}; });
+    cash = START_CASH; realizedTotal = 0; trades.length = 0;
+    Object.keys(pos).forEach(k => { pos[k]={shares:0,avg:0}; cooldown[k]=0; });
+    autoOn = false; $("auto-toggle").checked = false;
+    $("auto-bar").classList.remove("auto-on"); $("trader").classList.remove("locked");
+    $("auto-state").textContent = "停止中";
     setSide("buy"); $("qty").value=100; renderAll();
     toast("資産をリセットしました");
   };
