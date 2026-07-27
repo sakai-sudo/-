@@ -1,0 +1,550 @@
+<title>ミニ株トレーダー — 下部売買ツール デモ</title>
+<style>
+  /* ============ Design tokens ============ */
+  :root {
+    /* neutrals with a faint cool bias — a "market terminal" grey, chosen not defaulted */
+    --bg:        #f4f6f9;
+    --surface:   #ffffff;
+    --surface-2: #eef1f6;
+    --line:      #dce1ea;
+    --line-soft: #e7ebf1;
+    --ink:       #1a2030;
+    --ink-2:     #56607a;
+    --ink-3:     #8b95ad;
+    /* brand accent — amber/gold, the colour of markets & money, distinct from semantics */
+    --accent:    #d99413;
+    --accent-ink:#7a5405;
+    /* semantics — up/buy vs down/sell */
+    --up:        #12a869;
+    --up-soft:   #d6f3e6;
+    --down:      #e0344b;
+    --down-soft: #fadde1;
+    --up-fill:   rgba(18,168,105,.14);
+    --down-fill: rgba(224,52,75,.12);
+    --shadow:    0 1px 2px rgba(20,28,48,.06), 0 8px 24px rgba(20,28,48,.06);
+    --shadow-up: 0 -2px 18px rgba(20,28,48,.07);
+    --radius:    14px;
+    --font-sans: "Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP","Yu Gothic",Meiryo,system-ui,-apple-system,"Segoe UI",sans-serif;
+    --font-num:  "SF Mono","JetBrains Mono","Roboto Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:        #0d1017;
+      --surface:   #161b25;
+      --surface-2: #1d2431;
+      --line:      #29313f;
+      --line-soft: #222a37;
+      --ink:       #e6ebf4;
+      --ink-2:     #9aa6bd;
+      --ink-3:     #66718a;
+      --accent:    #f0b429;
+      --accent-ink:#f7cf6b;
+      --up:        #22c47f;
+      --up-soft:   #123227;
+      --down:      #ff5069;
+      --down-soft: #3a1520;
+      --up-fill:   rgba(34,196,127,.16);
+      --down-fill: rgba(255,80,105,.14);
+      --shadow:    0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+      --shadow-up: 0 -4px 24px rgba(0,0,0,.4);
+    }
+  }
+  /* explicit toggle overrides (viewer theme switch stamps data-theme) */
+  :root[data-theme="light"] {
+    --bg:#f4f6f9; --surface:#fff; --surface-2:#eef1f6; --line:#dce1ea; --line-soft:#e7ebf1;
+    --ink:#1a2030; --ink-2:#56607a; --ink-3:#8b95ad; --accent:#d99413; --accent-ink:#7a5405;
+    --up:#12a869; --up-soft:#d6f3e6; --down:#e0344b; --down-soft:#fadde1;
+    --up-fill:rgba(18,168,105,.14); --down-fill:rgba(224,52,75,.12);
+    --shadow:0 1px 2px rgba(20,28,48,.06),0 8px 24px rgba(20,28,48,.06);
+    --shadow-up:0 -2px 18px rgba(20,28,48,.07);
+  }
+  :root[data-theme="dark"] {
+    --bg:#0d1017; --surface:#161b25; --surface-2:#1d2431; --line:#29313f; --line-soft:#222a37;
+    --ink:#e6ebf4; --ink-2:#9aa6bd; --ink-3:#66718a; --accent:#f0b429; --accent-ink:#f7cf6b;
+    --up:#22c47f; --up-soft:#123227; --down:#ff5069; --down-soft:#3a1520;
+    --up-fill:rgba(34,196,127,.16); --down-fill:rgba(255,80,105,.14);
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
+    --shadow-up:0 -4px 24px rgba(0,0,0,.4);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-sans);
+         -webkit-font-smoothing:antialiased; }
+  .num { font-family:var(--font-num); font-variant-numeric:tabular-nums; letter-spacing:-.01em; }
+
+  /* ============ App shell ============ */
+  .app { display:flex; flex-direction:column; height:100dvh; max-width:520px; margin:0 auto;
+         background:var(--bg); position:relative; }
+  @supports not (height:100dvh) { .app { height:100vh; } }
+
+  /* ---- Header ---- */
+  header { flex:0 0 auto; padding:12px 16px 10px; border-bottom:1px solid var(--line-soft);
+           background:var(--surface); }
+  .brand { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .brand .logo { display:flex; align-items:center; gap:8px; font-weight:800; font-size:15px; letter-spacing:.01em; }
+  .brand .logo .mark { width:22px; height:22px; border-radius:6px; background:var(--accent);
+        display:grid; place-items:center; color:#1a1300; font-size:13px; font-weight:900; }
+  .demo-badge { font-size:10.5px; font-weight:700; letter-spacing:.08em; color:var(--accent-ink);
+        background:color-mix(in srgb, var(--accent) 18%, transparent); padding:3px 8px; border-radius:999px; }
+  .btn-reset { border:1px solid var(--line); background:var(--surface-2); color:var(--ink-2);
+        font:inherit; font-size:11.5px; font-weight:600; padding:5px 10px; border-radius:8px; cursor:pointer; }
+  .btn-reset:hover { color:var(--ink); border-color:var(--ink-3); }
+
+  .account { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; margin-top:12px;
+             background:var(--line-soft); border:1px solid var(--line-soft); border-radius:10px; overflow:hidden; }
+  .account .cell { background:var(--surface); padding:9px 12px; }
+  .account .k { font-size:10.5px; color:var(--ink-3); font-weight:600; letter-spacing:.02em; }
+  .account .v { font-size:16px; font-weight:800; margin-top:2px; }
+  .account .v .yen { font-size:11px; font-weight:600; color:var(--ink-3); margin-right:1px; }
+
+  /* ---- Scrollable body ---- */
+  .scroll { flex:1 1 auto; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; }
+
+  /* ticker tabs */
+  .tickers { display:flex; gap:8px; padding:12px 16px 4px; overflow-x:auto; scrollbar-width:none; }
+  .tickers::-webkit-scrollbar { display:none; }
+  .tick { flex:0 0 auto; border:1px solid var(--line); background:var(--surface); border-radius:10px;
+          padding:7px 11px; cursor:pointer; min-width:96px; transition:border-color .15s, transform .1s; }
+  .tick:active { transform:scale(.98); }
+  .tick.on { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
+  .tick .nm { font-size:11.5px; font-weight:700; white-space:nowrap; }
+  .tick .cd { font-size:10px; color:var(--ink-3); }
+  .tick .pr { font-size:12.5px; font-weight:700; margin-top:3px; }
+  .tick .chg { font-size:10.5px; font-weight:700; }
+
+  /* quote block */
+  .quote { padding:14px 18px 4px; }
+  .quote .name { font-size:15px; font-weight:800; }
+  .quote .code { font-size:11.5px; color:var(--ink-3); font-weight:600; }
+  .quote .price-row { display:flex; align-items:baseline; gap:12px; margin-top:6px; flex-wrap:wrap; }
+  .quote .price { font-size:38px; font-weight:800; line-height:1; }
+  .quote .chg { font-size:14px; font-weight:800; display:flex; align-items:center; gap:7px; }
+  .quote .chg .arrow { font-size:12px; }
+  .flash-up { animation:fu .5s ease; }
+  .flash-dn { animation:fd .5s ease; }
+  @keyframes fu { 0%{color:var(--up)} 100%{} }
+  @keyframes fd { 0%{color:var(--down)} 100%{} }
+
+  .daystats { display:flex; gap:18px; padding:10px 18px 2px; }
+  .daystats .s .k { font-size:10px; color:var(--ink-3); font-weight:600; }
+  .daystats .s .v { font-size:12.5px; font-weight:700; margin-top:1px; }
+
+  /* chart */
+  .chart-wrap { padding:6px 8px 2px; }
+  canvas#chart { width:100%; height:190px; display:block; }
+  .ranges { display:flex; gap:6px; padding:2px 18px 6px; }
+  .ranges button { flex:1; border:1px solid var(--line); background:transparent; color:var(--ink-3);
+        font:inherit; font-size:11px; font-weight:700; padding:5px 0; border-radius:7px; cursor:pointer; }
+  .ranges button.on { background:var(--surface); color:var(--ink); border-color:var(--line); }
+
+  /* holdings */
+  .section-h { padding:14px 18px 6px; font-size:11px; font-weight:700; letter-spacing:.06em;
+        color:var(--ink-3); text-transform:uppercase; display:flex; justify-content:space-between; }
+  .holdings { padding:0 12px 8px; display:flex; flex-direction:column; gap:6px; }
+  .pos { display:grid; grid-template-columns:1fr auto; gap:2px 10px; background:var(--surface);
+         border:1px solid var(--line-soft); border-radius:10px; padding:10px 12px; }
+  .pos .nm { font-size:13px; font-weight:700; }
+  .pos .sub { font-size:10.5px; color:var(--ink-3); }
+  .pos .val { text-align:right; font-size:13px; font-weight:800; }
+  .pos .pl { text-align:right; font-size:11.5px; font-weight:700; }
+  .empty { text-align:center; color:var(--ink-3); font-size:12.5px; padding:14px 18px 6px; }
+
+  /* ============ 下部 売買ツール (the hero) ============ */
+  .trader { flex:0 0 auto; background:var(--surface); border-top:1px solid var(--line);
+            box-shadow:var(--shadow-up); padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+            display:flex; flex-direction:column; gap:11px; }
+  .side-toggle { display:grid; grid-template-columns:1fr 1fr; gap:0; background:var(--surface-2);
+        border:1px solid var(--line); border-radius:11px; padding:3px; }
+  .side-toggle button { border:0; background:transparent; color:var(--ink-2); font:inherit;
+        font-size:14px; font-weight:800; padding:9px 0; border-radius:8px; cursor:pointer; transition:.15s; }
+  .side-toggle button.buy-on  { background:var(--up);   color:#fff; box-shadow:0 2px 8px var(--up-fill); }
+  .side-toggle button.sell-on { background:var(--down); color:#fff; box-shadow:0 2px 8px var(--down-fill); }
+
+  .qty-row { display:flex; align-items:stretch; gap:8px; }
+  .stepper { display:flex; align-items:center; flex:1; border:1px solid var(--line);
+        border-radius:11px; overflow:hidden; background:var(--surface-2); }
+  .stepper button { width:44px; border:0; background:transparent; color:var(--ink); font-size:20px;
+        font-weight:700; cursor:pointer; }
+  .stepper button:active { background:var(--line); }
+  .stepper .qin { flex:1; text-align:center; border:0; background:transparent; color:var(--ink);
+        font-family:var(--font-num); font-size:19px; font-weight:800; width:100%; -moz-appearance:textfield; }
+  .stepper .qin::-webkit-outer-spin-button, .stepper .qin::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+  .stepper .unit { font-size:11px; color:var(--ink-3); padding-right:12px; font-weight:600; }
+
+  .presets { display:flex; gap:6px; }
+  .presets button { border:1px solid var(--line); background:transparent; color:var(--ink-2);
+        font:inherit; font-size:11.5px; font-weight:700; padding:7px 0; border-radius:8px; cursor:pointer; flex:1; }
+  .presets button:hover { border-color:var(--ink-3); color:var(--ink); }
+
+  .estimate { display:flex; justify-content:space-between; align-items:baseline; font-size:12px;
+        color:var(--ink-2); padding:0 2px; }
+  .estimate .amt { font-size:17px; font-weight:800; color:var(--ink); }
+  .estimate .amt .yen { font-size:11px; color:var(--ink-3); font-weight:600; margin-right:1px; }
+
+  .execute { border:0; border-radius:13px; padding:15px 0; font:inherit; font-size:16px; font-weight:900;
+        color:#fff; cursor:pointer; letter-spacing:.04em; transition:filter .15s, transform .08s; }
+  .execute:active { transform:scale(.99); }
+  .execute.buy  { background:linear-gradient(180deg,var(--up),color-mix(in srgb,var(--up) 82%,#000)); }
+  .execute.sell { background:linear-gradient(180deg,var(--down),color-mix(in srgb,var(--down) 82%,#000)); }
+  .execute:hover { filter:brightness(1.05); }
+  .execute:disabled { background:var(--surface-2); color:var(--ink-3); cursor:not-allowed; filter:none; }
+
+  /* toast */
+  .toast-host { position:absolute; left:0; right:0; bottom:calc(100% - 4px); display:flex;
+        justify-content:center; pointer-events:none; }
+  #trader-anchor { position:relative; }
+  .toast { position:fixed; left:50%; transform:translateX(-50%) translateY(0); bottom:190px;
+        background:var(--ink); color:var(--bg); padding:11px 16px; border-radius:11px; font-size:12.5px;
+        font-weight:700; box-shadow:var(--shadow); z-index:50; max-width:88%; text-align:center;
+        opacity:0; transition:opacity .25s, transform .25s; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(-6px); }
+  .toast.warn { background:var(--down); color:#fff; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation:none !important; transition:none !important; }
+  }
+  @media (min-width:521px) {
+    .app { border-left:1px solid var(--line-soft); border-right:1px solid var(--line-soft); }
+  }
+</style>
+
+<div class="app" id="trader-anchor">
+  <header>
+    <div class="brand">
+      <div class="logo"><span class="mark">株</span> ミニ株トレーダー</div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span class="demo-badge">DEMO</span>
+        <button class="btn-reset" id="reset">リセット</button>
+      </div>
+    </div>
+    <div class="account">
+      <div class="cell"><div class="k">総資産</div><div class="v num" id="ac-total"><span class="yen">¥</span>0</div></div>
+      <div class="cell"><div class="k">現金</div><div class="v num" id="ac-cash"><span class="yen">¥</span>0</div></div>
+      <div class="cell"><div class="k">評価損益</div><div class="v num" id="ac-pl"><span class="yen">¥</span>0</div></div>
+    </div>
+  </header>
+
+  <div class="scroll">
+    <div class="tickers" id="tickers"></div>
+
+    <div class="quote">
+      <div class="name" id="q-name">—</div>
+      <div class="code num" id="q-code">—</div>
+      <div class="price-row">
+        <div class="price num" id="q-price">—</div>
+        <div class="chg num" id="q-chg"><span class="arrow"></span><span id="q-chg-t"></span></div>
+      </div>
+    </div>
+    <div class="daystats">
+      <div class="s"><div class="k">始値</div><div class="v num" id="q-open">—</div></div>
+      <div class="s"><div class="k">高値</div><div class="v num" id="q-high">—</div></div>
+      <div class="s"><div class="k">安値</div><div class="v num" id="q-low">—</div></div>
+      <div class="s"><div class="k">保有</div><div class="v num" id="q-hold">0株</div></div>
+    </div>
+
+    <div class="chart-wrap"><canvas id="chart"></canvas></div>
+    <div class="ranges" id="ranges">
+      <button data-n="60">1分</button>
+      <button data-n="120" class="on">5分</button>
+      <button data-n="240">15分</button>
+    </div>
+
+    <div class="section-h"><span>保有銘柄</span><span id="hold-count"></span></div>
+    <div class="holdings" id="holdings"></div>
+    <div class="empty" id="hold-empty">まだ保有銘柄はありません。下の売買ツールから注文しましょう。</div>
+    <div style="height:8px"></div>
+  </div>
+
+  <!-- ============ 下部 売買ツール ============ -->
+  <div class="trader">
+    <div class="side-toggle" id="side">
+      <button data-side="buy" class="buy-on">買い</button>
+      <button data-side="sell">売り</button>
+    </div>
+    <div class="qty-row">
+      <div class="stepper">
+        <button id="minus" aria-label="減らす">−</button>
+        <input class="qin num" id="qty" type="number" inputmode="numeric" value="100" min="1" aria-label="株数">
+        <span class="unit">株</span>
+        <button id="plus" aria-label="増やす">+</button>
+      </div>
+    </div>
+    <div class="presets" id="presets">
+      <button data-set="100">100</button>
+      <button data-set="500">500</button>
+      <button data-set="1000">1,000</button>
+      <button data-max="1">全力</button>
+    </div>
+    <div class="estimate">
+      <span id="est-label">概算約定代金（手数料無料）</span>
+      <span class="amt num" id="est-amt"><span class="yen">¥</span>0</span>
+    </div>
+    <button class="execute buy" id="execute">100株 買う</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const yen = n => "¥" + Math.round(n).toLocaleString("ja-JP");
+  const fmt = n => Math.round(n).toLocaleString("ja-JP");
+  const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+  const START_CASH = 100000;
+
+  // ---- Mock universe (fictional names/codes; prices chosen for a ¥100,000 wallet) ----
+  const SEED = [
+    { code:"2145", name:"みらいテック",     price:812,  vol:0.9 },
+    { code:"6301", name:"日本ロボ工業",     price:688,  vol:1.3 },
+    { code:"4568", name:"さくら製薬",       price:1240, vol:1.0 },
+    { code:"9501", name:"グリーンエナジー", price:945,  vol:1.1 },
+    { code:"8306", name:"フィンテック銀行", price:534,  vol:0.7 },
+  ];
+
+  const HIST = 240;
+  const stocks = SEED.map(s => {
+    const hist = [];
+    let p = s.price;
+    for (let i=0;i<HIST;i++){ p *= 1 + (Math.random()-0.5)*0.004*s.vol; hist.push(p); }
+    const price = hist[hist.length-1];
+    const open  = hist[hist.length-120] || hist[0];
+    return { ...s, price, open, hist,
+             high:Math.max(...hist.slice(-120)), low:Math.min(...hist.slice(-120)) };
+  });
+
+  let sel = 0, side = "buy", rangeN = 120;
+  let cash = START_CASH;
+  // positions keyed by code: {shares, avg}
+  const pos = Object.fromEntries(stocks.map(s => [s.code, {shares:0, avg:0}]));
+
+  const $ = id => document.getElementById(id);
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ---------- Rendering ----------
+  function renderTickers(){
+    const host = $("tickers"); host.innerHTML = "";
+    stocks.forEach((s,i) => {
+      const up = s.price >= s.open;
+      const chgP = ((s.price - s.open)/s.open*100);
+      const el = document.createElement("div");
+      el.className = "tick" + (i===sel ? " on":"");
+      el.innerHTML =
+        `<div class="nm">${s.name}</div><div class="cd num">${s.code}</div>`+
+        `<div class="pr num">${fmt(s.price)}</div>`+
+        `<div class="chg num" style="color:${up?'var(--up)':'var(--down)'}">${up?'+':''}${chgP.toFixed(2)}%</div>`;
+      el.onclick = () => { sel=i; renderAll(); };
+      host.appendChild(el);
+    });
+  }
+
+  function renderQuote(flash){
+    const s = stocks[sel];
+    $("q-name").textContent = s.name;
+    $("q-code").textContent = s.code + " · 東証";
+    const priceEl = $("q-price");
+    priceEl.textContent = fmt(s.price);
+    const up = s.price >= s.open;
+    const diff = s.price - s.open, diffP = diff/s.open*100;
+    const chg = $("q-chg");
+    chg.style.color = up ? "var(--up)" : "var(--down)";
+    chg.querySelector(".arrow").textContent = up ? "▲" : "▼";
+    $("q-chg-t").textContent = `${up?'+':''}${fmt(diff)} (${up?'+':''}${diffP.toFixed(2)}%)`;
+    $("q-open").textContent = fmt(s.open);
+    $("q-high").textContent = fmt(s.high);
+    $("q-low").textContent  = fmt(s.low);
+    $("q-hold").textContent = fmt(pos[s.code].shares) + "株";
+    if (flash && !reduce){
+      priceEl.classList.remove("flash-up","flash-dn");
+      void priceEl.offsetWidth;
+      priceEl.classList.add(flash>0 ? "flash-up" : "flash-dn");
+    }
+  }
+
+  function renderAccount(){
+    let holdVal = 0, unreal = 0;
+    stocks.forEach(s => { const p=pos[s.code];
+      if (p.shares>0){ holdVal += p.shares*s.price; unreal += (s.price-p.avg)*p.shares; } });
+    const total = cash + holdVal;
+    $("ac-total").innerHTML = `<span class="yen">¥</span>${fmt(total)}`;
+    $("ac-cash").innerHTML  = `<span class="yen">¥</span>${fmt(cash)}`;
+    const plEl = $("ac-pl");
+    plEl.innerHTML = `<span class="yen">¥</span>${unreal>=0?'+':''}${fmt(unreal)}`;
+    plEl.style.color = unreal===0 ? "var(--ink)" : unreal>0 ? "var(--up)" : "var(--down)";
+  }
+
+  function renderHoldings(){
+    const host = $("holdings"); host.innerHTML = "";
+    const held = stocks.filter(s => pos[s.code].shares>0);
+    $("hold-empty").style.display = held.length ? "none":"block";
+    $("hold-count").textContent = held.length ? `${held.length}銘柄` : "";
+    held.forEach(s => {
+      const p = pos[s.code];
+      const val = p.shares*s.price, pl = (s.price-p.avg)*p.shares, plP = (s.price-p.avg)/p.avg*100;
+      const col = pl>=0 ? "var(--up)":"var(--down)";
+      const el = document.createElement("div");
+      el.className = "pos";
+      el.innerHTML =
+        `<div class="nm">${s.name}</div>`+
+        `<div class="val num">${yen(val)}</div>`+
+        `<div class="sub num">${fmt(p.shares)}株 · 平均${fmt(p.avg)}</div>`+
+        `<div class="pl num" style="color:${col}">${pl>=0?'+':''}${fmt(pl)} (${pl>=0?'+':''}${plP.toFixed(2)}%)</div>`;
+      host.appendChild(el);
+    });
+  }
+
+  // ---------- Chart ----------
+  const cv = $("chart"), ctx = cv.getContext("2d");
+  function sizeCanvas(){
+    const r = cv.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio||1, 2.5);
+    cv.width = r.width*dpr; cv.height = r.height*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  function drawChart(){
+    const s = stocks[sel];
+    const w = cv.getBoundingClientRect().width, h = cv.getBoundingClientRect().height;
+    ctx.clearRect(0,0,w,h);
+    const data = s.hist.slice(-rangeN);
+    const pad = 6, top = 8, bot = h-8;
+    let mn = Math.min(...data), mx = Math.max(...data);
+    const range = (mx-mn) || 1; mn -= range*0.08; mx += range*0.08;
+    const X = i => pad + i*(w-pad*2)/(data.length-1);
+    const Y = v => top + (mx-v)/(mx-mn)*(bot-top);
+    const up = s.price >= s.open;
+    const cs = getComputedStyle(document.documentElement);
+    const upC = cs.getPropertyValue("--up").trim(), dnC = cs.getPropertyValue("--down").trim();
+    const lineC = up ? upC : dnC;
+    const gridC = cs.getPropertyValue("--line-soft").trim();
+
+    // grid
+    ctx.strokeStyle = gridC; ctx.lineWidth = 1;
+    for (let g=0; g<=3; g++){ const y=top+(bot-top)*g/3; ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(w-pad,y); ctx.stroke(); }
+    // prev-close (open) reference line
+    ctx.strokeStyle = cs.getPropertyValue("--ink-3").trim(); ctx.globalAlpha=.5;
+    ctx.setLineDash([3,3]); ctx.beginPath();
+    ctx.moveTo(pad, Y(s.open)); ctx.lineTo(w-pad, Y(s.open)); ctx.stroke();
+    ctx.setLineDash([]); ctx.globalAlpha=1;
+
+    // area fill
+    const grad = ctx.createLinearGradient(0,top,0,bot);
+    grad.addColorStop(0, up ? "rgba(18,168,105,.28)" : "rgba(224,52,75,.26)");
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.beginPath(); ctx.moveTo(X(0), bot);
+    data.forEach((v,i)=>ctx.lineTo(X(i), Y(v)));
+    ctx.lineTo(X(data.length-1), bot); ctx.closePath();
+    ctx.fillStyle = grad; ctx.fill();
+
+    // line
+    ctx.beginPath(); data.forEach((v,i)=> i?ctx.lineTo(X(i),Y(v)):ctx.moveTo(X(i),Y(v)));
+    ctx.strokeStyle = lineC; ctx.lineWidth = 2; ctx.lineJoin="round"; ctx.stroke();
+
+    // endpoint dot
+    const ex = X(data.length-1), ey = Y(data[data.length-1]);
+    ctx.beginPath(); ctx.arc(ex,ey,3.5,0,7); ctx.fillStyle=lineC; ctx.fill();
+    ctx.beginPath(); ctx.arc(ex,ey,7,0,7); ctx.strokeStyle=lineC; ctx.globalAlpha=.3; ctx.lineWidth=2; ctx.stroke(); ctx.globalAlpha=1;
+  }
+
+  // ---------- Trade panel ----------
+  function affordableMax(){
+    const s = stocks[sel];
+    if (side==="buy") return Math.floor(cash / s.price);
+    return pos[s.code].shares;
+  }
+  function updateEstimate(){
+    const s = stocks[sel];
+    const q = Math.max(0, parseInt($("qty").value)||0);
+    $("est-amt").innerHTML = `<span class="yen">¥</span>${fmt(q*s.price)}`;
+    $("est-label").textContent = side==="buy" ? "概算約定代金（手数料無料）" : "概算受取代金（手数料無料）";
+    const ex = $("execute");
+    ex.className = "execute " + side;
+    ex.textContent = `${fmt(q)}株 ${side==="buy"?"買う":"売る"}`;
+    let ok = q>0;
+    if (side==="buy"  && q*s.price > cash) ok=false;
+    if (side==="sell" && q > pos[s.code].shares) ok=false;
+    ex.disabled = !ok;
+  }
+  function setSide(v){
+    side = v;
+    $("side").children[0].className = v==="buy"  ? "buy-on"  : "";
+    $("side").children[1].className = v==="sell" ? "sell-on" : "";
+    updateEstimate();
+  }
+
+  let toastT;
+  function toast(msg, warn){
+    let t = document.querySelector(".toast");
+    if (!t){ t=document.createElement("div"); t.className="toast"; document.body.appendChild(t); }
+    t.className = "toast" + (warn?" warn":"");
+    t.textContent = msg;
+    void t.offsetWidth; t.classList.add("show");
+    clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove("show"), 2200);
+  }
+
+  function execute(){
+    const s = stocks[sel], p = pos[s.code];
+    const q = Math.max(0, parseInt($("qty").value)||0);
+    if (q<=0) return;
+    if (side==="buy"){
+      const cost = q*s.price;
+      if (cost>cash){ toast("現金が不足しています", true); return; }
+      p.avg = (p.shares*p.avg + cost)/(p.shares+q);
+      p.shares += q; cash -= cost;
+      toast(`${s.name} を ${fmt(q)}株 買付 · ${yen(cost)}`);
+    } else {
+      if (q>p.shares){ toast("保有株数が不足しています", true); return; }
+      const proceeds = q*s.price, realized = (s.price-p.avg)*q;
+      p.shares -= q; cash += proceeds;
+      if (p.shares===0) p.avg=0;
+      toast(`${s.name} を ${fmt(q)}株 売却 · 損益 ${realized>=0?'+':''}${yen(realized)}`);
+    }
+    renderAll();
+  }
+
+  function renderAll(flash){
+    renderTickers(); renderQuote(flash); renderAccount(); renderHoldings();
+    sizeCanvas(); drawChart(); updateEstimate();
+  }
+
+  // ---------- Live tick (random walk) ----------
+  function tick(){
+    stocks.forEach((s,i) => {
+      const drift = (Math.random()-0.5)*0.006*s.vol + (Math.random()<0.03 ? (Math.random()-0.5)*0.02 : 0);
+      s.price = Math.max(1, s.price*(1+drift));
+      s.hist.push(s.price); if (s.hist.length>HIST) s.hist.shift();
+      s.high = Math.max(s.high, s.price); s.low = Math.min(s.low, s.price);
+    });
+    const s = stocks[sel];
+    const flash = s.hist[s.hist.length-1] - s.hist[s.hist.length-2];
+    renderTickers(); renderQuote(flash>0?1:flash<0?-1:0); renderAccount(); renderHoldings();
+    drawChart(); updateEstimate();
+  }
+
+  // ---------- Events ----------
+  $("side").addEventListener("click", e => { const b=e.target.closest("button"); if(b) setSide(b.dataset.side); });
+  $("minus").onclick = () => { $("qty").value = Math.max(1,(parseInt($("qty").value)||0)-100); updateEstimate(); };
+  $("plus").onclick  = () => { $("qty").value = (parseInt($("qty").value)||0)+100; updateEstimate(); };
+  $("qty").addEventListener("input", updateEstimate);
+  $("presets").addEventListener("click", e => {
+    const b = e.target.closest("button"); if(!b) return;
+    $("qty").value = b.dataset.max ? Math.max(1, affordableMax()) : parseInt(b.dataset.set);
+    updateEstimate();
+  });
+  $("execute").onclick = execute;
+  $("ranges").addEventListener("click", e => {
+    const b=e.target.closest("button"); if(!b) return;
+    rangeN = parseInt(b.dataset.n);
+    [...$("ranges").children].forEach(x=>x.classList.toggle("on", x===b));
+    sizeCanvas(); drawChart();
+  });
+  $("reset").onclick = () => {
+    cash = START_CASH;
+    stocks.forEach(s => pos[s.code] = pos[s.code]);
+    Object.keys(pos).forEach(k => { pos[k]={shares:0,avg:0}; });
+    setSide("buy"); $("qty").value=100; renderAll();
+    toast("資産をリセットしました");
+  };
+  window.addEventListener("resize", () => { sizeCanvas(); drawChart(); });
+
+  // ---------- Boot ----------
+  renderAll();
+  setSide("buy");
+  setInterval(tick, 1000);
+})();
+</script>
