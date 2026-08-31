@@ -1,0 +1,111 @@
+// 妊婦さん同士のママ友マッチング「マタマッチ」データモデル
+//
+// プライバシー方針（重要）:
+//   - 本名・住所・電話番号・医療記録は一切保持しない
+//   - 居住地は「都道府県 + 市区町村」までに留める
+//   - 出産予定日は妊娠週数の算出のみに使い、生の日付は本人以外に表示しない
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String   @id @default(cuid())
+  email      String   @unique
+  nickname   String
+  dueDate    DateTime // 出産予定日（週数算出用。他ユーザーには週数のみ公開）
+  prefecture String
+  city       String
+  birthOrder String // "first" = 初産 / "experienced" = 経産
+  ageGroup   String // constants.ts の AGE_GROUPS の id
+  interests  String   @default("") // タグ id のカンマ区切り
+  bio        String   @default("")
+  wantMeetup Boolean  @default(false) // オフラインで会うことに前向きか
+  avatarSeed String
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  sentLikes     Like[]    @relation("likeSender")
+  receivedLikes Like[]    @relation("likeReceiver")
+  matchesAsA    Match[]   @relation("matchUserA")
+  matchesAsB    Match[]   @relation("matchUserB")
+  messages      Message[]
+  blocksMade    Block[]   @relation("blocker")
+  blocksAgainst Block[]   @relation("blocked")
+  reportsMade   Report[]  @relation("reporter")
+
+  @@index([prefecture])
+}
+
+/// 片方向の「いいね」。相互になった時点で Match を作る
+model Like {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  createdAt  DateTime @default(now())
+
+  sender   User @relation("likeSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("likeReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
+  @@index([receiverId])
+}
+
+/// 相互いいね成立。userAId < userBId で正規化して重複を防ぐ
+model Match {
+  id        String   @id @default(cuid())
+  userAId   String
+  userBId   String
+  createdAt DateTime @default(now())
+
+  userA    User      @relation("matchUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB    User      @relation("matchUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@unique([userAId, userBId])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  matchId   String
+  senderId  String
+  body      String
+  createdAt DateTime @default(now())
+
+  match  Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  sender User  @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([matchId, createdAt])
+}
+
+/// ブロック。おすすめ一覧・いいね一覧の双方から相互に除外される
+model Block {
+  id        String   @id @default(cuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  blocker User @relation("blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+}
+
+model Report {
+  id         String   @id @default(cuid())
+  reporterId String
+  reportedId String
+  reason     String
+  detail     String   @default("")
+  createdAt  DateTime @default(now())
+
+  reporter User @relation("reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([reportedId])
+}
