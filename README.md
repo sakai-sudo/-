@@ -6,6 +6,7 @@
 
 - 市場と競合の調査 → [docs/competitive-research.md](docs/competitive-research.md)
 - App Store 公開・収益化までの道筋 → [docs/roadmap.md](docs/roadmap.md)
+- 妊婦であることの確認をどう設計するか → [docs/verification.md](docs/verification.md)
 
 ---
 
@@ -130,7 +131,7 @@ prisma/
 本番運用の前に、少なくとも以下が必要です。
 
 1. **認証** — 現在は Cookie にユーザー ID を入れるだけで、パスワードもトークン署名もありません（`src/lib/session.ts`）。メールリンク認証や OAuth への差し替えが必須です
-2. **妊婦であることの確認** — なりすまし対策が未実装です。母子手帳の一部提示や、産院連携などの検討が必要です
+2. **妊婦であることの確認** — なりすまし対策が未実装です。方式の比較と推奨は [docs/verification.md](docs/verification.md) にまとめています
 3. **通報の運用** — `Report` テーブルに保存するだけで、管理画面と対応フローがありません
 4. **リアルタイム性** — トークはページ遷移で更新されます。通話のシグナリングはポーリングで代用しており、WebSocket による購読は未実装です
 5. **通話の本番要件** — TURN サーバー、アプリを閉じていても鳴る着信（APNs の VoIP push ＋ CallKit）、バックグラウンド音声。いずれも Web だけでは実現できず、ネイティブアプリ化が前提になります

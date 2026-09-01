@@ -76,3 +76,17 @@
 - [マッチングアプリを通じたマルチ取引の勧誘（広島県）](https://www.pref.hiroshima.lg.jp/soshiki/41/keihatsu05-0314.html)
 - [出会い系サイト規制法と同性サービス（TRUSTDOCK）](https://biz.trustdock.io/column/deai-kyc) ／ [届出義務（東京スタートアップ法律事務所）](https://tokyo-startup-law.or.jp/magazine/category06/definition-and-notification-of-matching-app-operator/)
 - [App Review Guidelines（Apple）](https://developer.apple.com/app-store/review/guidelines/)
+
+---
+
+## 追記：広告在庫としての妊婦セグメント
+
+- アプリ内広告の相場は **CPM 数百円〜数千円**。ターゲティング精度の高い媒体ほど高い。「妊娠中・居住地・出産予定月が分かっている」在庫は濃いセグメントで、CPM 800〜1,500円は狙える部類。
+- ただし **記事タイアップ・純広告の直販は規模がないと売れない。** ママリの広告出稿は**予算枠100万円〜**で、それが成立するのは会員412万人・総リーチ約900万人という規模があるから。
+- **妊婦向けの広告在庫は薬機法・景品表示法のグレーゾーンが多い。** 葉酸サプリ・妊活・母乳関連では「スクスク健康な胎児へ」「これで授かりました」「不妊予防になる」といった表現が薬機法違反にあたる。アドネットワークに丸投げすると、こうした広告が自動で配信される。
+- 試算と、広告を主軸に置く場合の判断は [roadmap.md](./roadmap.md) にまとめた。
+
+追加の出典：
+- [アプリ内広告の費用相場](https://www.biz.ne.jp/matome/2009729/) ／ [CPMとは（Geniee）](https://ad-insight.geniee.co.jp/article/cpm)
+- [ママリの広告出稿・媒体資料（メディアレーダー）](https://media-radar.jp/detail21263.html)
+- [健康食品に関する景品表示法及び健康増進法上の留意事項（消費者庁 PDF）](https://www.caa.go.jp/policies/policy/representation/extravagant_advertisement/assets/representation_cms214_221205_01.pdf) ／ [妊活サプリ広告のNG表現（薬事法ドットコム系解説）](https://www.89ji.com/lab/healthy-food/supplement-advertising.html)
