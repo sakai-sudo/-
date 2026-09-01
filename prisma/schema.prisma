@@ -15,21 +15,24 @@ datasource db {
 }
 
 model User {
-  id         String   @id @default(cuid())
-  email      String   @unique
-  nickname   String
-  dueDate    DateTime // 出産予定日（週数算出用。他ユーザーには週数のみ公開）
-  prefecture String
-  city       String
-  birthOrder String // "first" = 初産 / "experienced" = 経産
-  ageGroup   String // constants.ts の AGE_GROUPS の id
-  interests  String   @default("") // タグ id のカンマ区切り
-  bio        String   @default("")
-  wantMeetup Boolean  @default(false) // オフラインで会うことに前向きか
-  avatarSeed String
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id           String   @id @default(cuid())
+  email        String   @unique
+  nickname     String
+  dueDate      DateTime // 出産予定日（週数算出用。他ユーザーには週数のみ公開）
+  prefecture   String
+  city         String
+  birthOrder   String // "first" = 初産 / "experienced" = 経産
+  ageGroup     String // constants.ts の AGE_GROUPS の id
+  interests    String   @default("") // タグ id のカンマ区切り
+  bio          String   @default("")
+  wantMeetup   Boolean  @default(false) // オフラインで会うことに前向きか
+  acceptCalls  Boolean  @default(true) // アプリ内通話を受け付けるか
+  callFromHour Int      @default(10) // 通話を受け付ける時間帯（開始・24時間表記）
+  callToHour   Int      @default(21) // 通話を受け付ける時間帯（終了）
+  avatarSeed   String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   sentLikes     Like[]    @relation("likeSender")
   receivedLikes Like[]    @relation("likeReceiver")
@@ -39,6 +42,8 @@ model User {
   blocksMade    Block[]   @relation("blocker")
   blocksAgainst Block[]   @relation("blocked")
   reportsMade   Report[]  @relation("reporter")
+  callsMade     Call[]    @relation("callCaller")
+  callsReceived Call[]    @relation("callCallee")
 
   @@index([prefecture])
 }
@@ -67,6 +72,7 @@ model Match {
   userA    User      @relation("matchUserA", fields: [userAId], references: [id], onDelete: Cascade)
   userB    User      @relation("matchUserB", fields: [userBId], references: [id], onDelete: Cascade)
   messages Message[]
+  calls    Call[]
 
   @@unique([userAId, userBId])
 }
@@ -75,6 +81,8 @@ model Message {
   id        String   @id @default(cuid())
   matchId   String
   senderId  String
+  /// "text" = 通常のメッセージ / "call" = 通話の記録（発信・不在着信・通話時間）
+  kind      String   @default("text")
   body      String
   createdAt DateTime @default(now())
 
@@ -108,4 +116,44 @@ model Report {
   reporter User @relation("reporter", fields: [reporterId], references: [id], onDelete: Cascade)
 
   @@index([reportedId])
+}
+
+/// アプリ内音声通話。電話番号は交換せず、マッチ済みの相手とだけつながる。
+/// status: ringing（呼び出し中）→ active（通話中）→ ended / declined / missed / canceled
+model Call {
+  id          String    @id @default(cuid())
+  matchId     String
+  callerId    String
+  calleeId    String
+  status      String    @default("ringing")
+  /// 「15分だけ話せませんか？」のような、呼び出しに添える一言
+  note        String    @default("")
+  createdAt   DateTime  @default(now())
+  answeredAt  DateTime?
+  endedAt     DateTime?
+  durationSec Int       @default(0)
+
+  match   Match        @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  caller  User         @relation("callCaller", fields: [callerId], references: [id], onDelete: Cascade)
+  callee  User         @relation("callCallee", fields: [calleeId], references: [id], onDelete: Cascade)
+  signals CallSignal[]
+
+  @@index([calleeId, status])
+  @@index([callerId, status])
+  @@index([matchId, createdAt])
+}
+
+/// WebRTC の SDP / ICE candidate を相手に受け渡すためだけの一時テーブル。
+/// 音声そのものはサーバーを通らず、端末間で直接やりとりされる。
+model CallSignal {
+  id        Int      @id @default(autoincrement())
+  callId    String
+  fromId    String
+  kind      String // "offer" | "answer" | "candidate"
+  payload   String
+  createdAt DateTime @default(now())
+
+  call Call @relation(fields: [callId], references: [id], onDelete: Cascade)
+
+  @@index([callId, id])
 }

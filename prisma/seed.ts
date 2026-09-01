@@ -26,6 +26,9 @@ type Seed = {
   interests: string[];
   bio: string;
   wantMeetup: boolean;
+  acceptCalls?: boolean;
+  callFromHour?: number;
+  callToHour?: number;
 };
 
 const USERS: Seed[] = [
@@ -52,6 +55,8 @@ const USERS: Seed[] = [
     interests: ["natural_birth", "working", "hoikatsu", "cafe", "handmade"],
     bio: "同じ区内です。里帰りはせず、こちらで産む予定です。\n産院は用賀のあたりに通っています。近所のマタニティ向けカフェを開拓中。",
     wantMeetup: true,
+    callFromHour: 9,
+    callToHour: 22,
   },
   {
     nickname: "ひなた",
@@ -64,6 +69,7 @@ const USERS: Seed[] = [
     interests: ["epidural", "working", "naming", "manga_game", "oshikatsu"],
     bio: "無痛分娩の予定です。名づけが全然決まらず夫と毎晩会議しています。\nインドア派なのでオンラインで話せる方だと気楽です。",
     wantMeetup: false,
+    acceptCalls: false,
   },
   {
     nickname: "あおい",
@@ -88,6 +94,7 @@ const USERS: Seed[] = [
     interests: ["morning_sickness", "working", "baby_goods", "drama", "pets"],
     bio: "まだつわりが残っていて、においがつらい日があります。\n猫と暮らしています。ドラマを流しながら横になっているのが日課です。",
     wantMeetup: false,
+    acceptCalls: false,
   },
   {
     nickname: "まる",
@@ -184,6 +191,8 @@ const USERS: Seed[] = [
     interests: ["after_fertility", "bed_rest", "handmade", "drama", "pets"],
     bio: "少し安静指示が出ていて、家で過ごす日が多いです。\n横になりながらできる話し相手を探しています。",
     wantMeetup: false,
+    callFromHour: 13,
+    callToHour: 20,
   },
   {
     nickname: "ふたば",
@@ -325,6 +334,9 @@ async function main() {
         interests: u.interests.join(","),
         bio: u.bio,
         wantMeetup: u.wantMeetup,
+        acceptCalls: u.acceptCalls ?? true,
+        callFromHour: u.callFromHour ?? 10,
+        callToHour: u.callToHour ?? 21,
         avatarSeed: seedFor(u.email),
       },
     });

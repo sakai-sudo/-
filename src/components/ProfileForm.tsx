@@ -22,7 +22,12 @@ export type ProfileFormValues = {
   interests: string[];
   bio: string;
   wantMeetup: boolean;
+  acceptCalls: boolean;
+  callFromHour: number;
+  callToHour: number;
 };
+
+const HOURS = Array.from({ length: 25 }, (_, i) => i);
 
 export const EMPTY_PROFILE: ProfileFormValues = {
   nickname: "",
@@ -35,6 +40,9 @@ export const EMPTY_PROFILE: ProfileFormValues = {
   interests: [],
   bio: "",
   wantMeetup: false,
+  acceptCalls: true,
+  callFromHour: 10,
+  callToHour: 21,
 };
 
 export function ProfileForm({
@@ -50,6 +58,7 @@ export function ProfileForm({
 }) {
   const [state, formAction, pending] = useActionState(action, { ok: false });
   const [selected, setSelected] = useState<string[]>(initial.interests);
+  const [acceptCalls, setAcceptCalls] = useState(initial.acceptCalls);
   const errors = state.fieldErrors ?? {};
   const atLimit = selected.length >= MAX_INTERESTS;
 
@@ -249,6 +258,48 @@ export function ProfileForm({
             <span className="hint">オンラインだけが良い方はオフのままで大丈夫です。</span>
           </span>
         </label>
+      </div>
+
+      <div className="field">
+        <span className="label">アプリ内通話</span>
+        <label className="check">
+          <input
+            type="checkbox"
+            name="acceptCalls"
+            checked={acceptCalls}
+            onChange={(e) => setAcceptCalls(e.target.checked)}
+          />
+          <span>
+            マッチした相手からの通話を受け付ける
+            <br />
+            <span className="hint">
+              電話番号は交換しません。着信は「呼び出し → 応答」の2段階で、出たくないときは見送れます。
+            </span>
+          </span>
+        </label>
+        {acceptCalls && (
+          <div className="filter-row" style={{ marginTop: 4 }}>
+            <span className="hint">受け付ける時間帯</span>
+            <select name="callFromHour" defaultValue={String(initial.callFromHour)} aria-label="通話受付の開始時刻">
+              {HOURS.map((h) => (
+                <option key={h} value={h}>{`${h}:00`}</option>
+              ))}
+            </select>
+            <span className="hint">〜</span>
+            <select name="callToHour" defaultValue={String(initial.callToHour)} aria-label="通話受付の終了時刻">
+              {HOURS.map((h) => (
+                <option key={h} value={h}>{`${h}:00`}</option>
+              ))}
+            </select>
+          </div>
+        )}
+        {!acceptCalls && (
+          <>
+            <input type="hidden" name="callFromHour" value={initial.callFromHour} />
+            <input type="hidden" name="callToHour" value={initial.callToHour} />
+          </>
+        )}
+        {errors.callFromHour && <span className="error">{errors.callFromHour}</span>}
       </div>
 
       {mode === "signup" && (

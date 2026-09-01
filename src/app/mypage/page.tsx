@@ -93,6 +93,9 @@ export default async function MyPage({
             interests: parseInterests(me.interests),
             bio: me.bio,
             wantMeetup: me.wantMeetup,
+            acceptCalls: me.acceptCalls,
+            callFromHour: me.callFromHour,
+            callToHour: me.callToHour,
           }}
           submitLabel="変更を保存する"
           mode="edit"

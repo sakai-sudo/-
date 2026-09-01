@@ -18,6 +18,9 @@ export type ProfileInput = {
   interests: string[];
   bio: string;
   wantMeetup: boolean;
+  acceptCalls: boolean;
+  callFromHour: number;
+  callToHour: number;
 };
 
 export type FieldErrors = Partial<Record<keyof ProfileInput, string>>;
@@ -38,6 +41,9 @@ export function readProfileForm(form: FormData): ProfileInput {
     interests: form.getAll("interests").map((v) => String(v)),
     bio: String(form.get("bio") ?? "").trim(),
     wantMeetup: form.get("wantMeetup") === "on" || form.get("wantMeetup") === "true",
+    acceptCalls: form.get("acceptCalls") === "on" || form.get("acceptCalls") === "true",
+    callFromHour: Number.parseInt(String(form.get("callFromHour") ?? "10"), 10),
+    callToHour: Number.parseInt(String(form.get("callToHour") ?? "21"), 10),
   };
 }
 
@@ -81,6 +87,13 @@ export function validateProfile(
     errors.interests = `タグは${MAX_INTERESTS}個までです`;
 
   if (input.bio.length > 400) errors.bio = "400文字以内で入力してください";
+
+  const validHour = (h: number) => Number.isInteger(h) && h >= 0 && h <= 24;
+  if (!validHour(input.callFromHour) || !validHour(input.callToHour)) {
+    errors.callFromHour = "通話を受け付ける時間帯を選び直してください";
+  } else if (input.acceptCalls && input.callFromHour === input.callToHour) {
+    errors.callFromHour = "開始と終了が同じ時刻になっています";
+  }
 
   return errors;
 }

@@ -40,6 +40,7 @@ export function CandidateCard({
           <p className="muted" style={{ margin: "6px 0 0", fontSize: "0.84rem" }}>
             {user.prefecture} {user.city} ・ {BIRTH_ORDER_LABEL[user.birthOrder]}
             {user.wantMeetup ? " ・ 会うのもOK" : ""}
+            {user.acceptCalls ? " ・ 通話OK" : ""}
           </p>
         </div>
       </div>

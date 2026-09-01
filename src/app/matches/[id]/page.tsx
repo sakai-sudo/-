@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { ReportPanel } from "@/components/ReportPanel";
 import { Composer } from "./Composer";
+import { CallButton } from "./CallButton";
+import { callAvailability, callHoursLabel } from "@/lib/calls";
 import { getMatchDetail } from "@/lib/queries";
 import { requireUser } from "@/lib/session";
 import { pregnancyStage } from "@/lib/pregnancy";
@@ -32,6 +34,7 @@ export default async function MatchDetailPage({
   const query = await searchParams;
   const stage = pregnancyStage(partner.dueDate);
   const score = scoreMatch(me, partner);
+  const availability = callAvailability(partner);
 
   const suggestions =
     match.messages.length === 0
@@ -65,7 +68,16 @@ export default async function MatchDetailPage({
               {partner.city}
             </span>
           </div>
+          <CallButton
+            matchId={match.id}
+            partnerName={partner.nickname}
+            available={availability.ok}
+            unavailableReason={availability.ok ? "" : availability.reason}
+          />
         </div>
+        <p className="hint" style={{ margin: "8px 0 0" }}>
+          {callHoursLabel(partner)}・通話しても電話番号は交換されません
+        </p>
       </div>
 
       {query.new && (
@@ -89,6 +101,21 @@ export default async function MatchDetailPage({
           const showDay = day !== lastDay;
           lastDay = day;
           const fromMe = m.senderId === me.id;
+          if (m.kind === "call") {
+            return (
+              <div key={m.id}>
+                {showDay && (
+                  <p className="center muted" style={{ fontSize: "0.72rem", margin: "8px 0" }}>
+                    {day}
+                  </p>
+                )}
+                <p className="calllog">
+                  <span aria-hidden="true">📞</span> {m.body}
+                  <span className="calllog-time">{clock(m.createdAt)}</span>
+                </p>
+              </div>
+            );
+          }
           return (
             <div key={m.id}>
               {showDay && (

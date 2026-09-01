@@ -602,3 +602,118 @@ textarea { resize: vertical; min-height: 92px; }
   body { font-size: 15.5px; }
   .page { padding: 24px 22px calc(var(--nav-h) + 40px); }
 }
+
+/* ================================ 通話 ================================ */
+
+.callroom {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100dvh - 100px - var(--nav-h));
+  gap: 20px;
+}
+.callroom-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+}
+.callroom-name { font-size: 1.4rem; margin: 4px 0 0; }
+.callroom-status {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--primary);
+  font-variant-numeric: tabular-nums;
+}
+.callroom-status[data-status="ended"],
+.callroom-status[data-status="declined"],
+.callroom-status[data-status="missed"],
+.callroom-status[data-status="canceled"] {
+  color: var(--muted);
+}
+.callroom-note { margin: 0; color: var(--ink-2); font-size: 0.9rem; }
+.callroom-privacy {
+  margin: 8px 0 0;
+  max-width: 320px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.callroom-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  padding-bottom: 16px;
+}
+.callroom-actions .btn { flex: 1; max-width: 200px; }
+.btn-hangup { background: var(--danger); color: #fff; }
+
+/* 通話の記録（トーク内） */
+.calllog {
+  margin: 0;
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--muted);
+  background: var(--bg-alt);
+  border-radius: var(--radius-pill);
+  padding: 5px 14px;
+  width: fit-content;
+  margin-inline: auto;
+}
+.calllog-time { margin-left: 8px; opacity: 0.75; }
+
+/* 着信バナー */
+.incoming {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--nav-h) + 14px);
+  z-index: 40;
+  width: min(92vw, 500px);
+  background: var(--surface);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 14px 16px;
+  animation: incoming-in 0.25s ease-out;
+}
+@keyframes incoming-in {
+  from { opacity: 0; transform: translate(-50%, 12px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .incoming { animation: none; }
+}
+
+/* ボトムシート */
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(26, 18, 12, 0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.sheet {
+  width: min(100%, 560px);
+  background: var(--surface);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: 20px 18px calc(20px + env(safe-area-inset-bottom));
+  box-shadow: var(--shadow-md);
+  animation: sheet-in 0.2s ease-out;
+}
+@keyframes sheet-in {
+  from { transform: translateY(20px); opacity: 0.6; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sheet { animation: none; }
+}
+@media (min-width: 600px) {
+  .sheet-backdrop { align-items: center; }
+  .sheet { border-radius: var(--radius-lg); }
+}

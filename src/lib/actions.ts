@@ -7,6 +7,7 @@ import { createSession, destroySession, getCurrentUser, requireUser } from "./se
 import { serializeInterests } from "./interests";
 import { hasErrors, readProfileForm, validateProfile, type FieldErrors } from "./validation";
 import { REPORT_REASONS } from "./constants";
+import { endCallsBetween } from "./calls";
 
 export type FormState = {
   ok: boolean;
@@ -50,6 +51,9 @@ export async function signUp(_prev: FormState = EMPTY, form: FormData): Promise<
       interests: serializeInterests(input.interests),
       bio: input.bio,
       wantMeetup: input.wantMeetup,
+      acceptCalls: input.acceptCalls,
+      callFromHour: input.callFromHour,
+      callToHour: input.callToHour,
       avatarSeed: randomSeed(),
     },
   });
@@ -112,6 +116,9 @@ export async function updateProfile(
       interests: serializeInterests(input.interests),
       bio: input.bio,
       wantMeetup: input.wantMeetup,
+      acceptCalls: input.acceptCalls,
+      callFromHour: input.callFromHour,
+      callToHour: input.callToHour,
     },
   });
 
@@ -227,6 +234,9 @@ export async function sendMessage(form: FormData) {
 
 /** ブロックを登録し、いいね・マッチ・トークも解除する */
 async function applyBlock(meId: string, targetId: string) {
+  // 通話中なら即座に切る
+  await endCallsBetween(meId, targetId);
+
   await prisma.block.upsert({
     where: { blockerId_blockedId: { blockerId: meId, blockedId: targetId } },
     create: { blockerId: meId, blockedId: targetId },

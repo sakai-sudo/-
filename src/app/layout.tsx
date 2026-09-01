@@ -3,6 +3,7 @@ import Link from "next/link";
 import "./globals.css";
 import { AppBar } from "@/components/AppBar";
 import { TabBar } from "@/components/TabBar";
+import { IncomingCallWatcher } from "@/components/IncomingCallWatcher";
 import { APP_NAME, APP_TAGLINE } from "@/lib/constants";
 import { getCounts } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/session";
@@ -45,6 +46,7 @@ export default async function RootLayout({
             }
           />
           {children}
+          {user && <IncomingCallWatcher />}
           {user && counts && <TabBar counts={counts} />}
         </div>
       </body>

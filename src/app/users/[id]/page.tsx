@@ -10,6 +10,7 @@ import { AGE_GROUP_LABEL, BIRTH_ORDER_LABEL } from "@/lib/constants";
 import { scoreLabel, scoreMatch } from "@/lib/matching";
 import { dueInLabel, dueMonthLabel, pregnancyStage } from "@/lib/pregnancy";
 import { getVisibleUser } from "@/lib/queries";
+import { callHoursLabel } from "@/lib/calls";
 import { requireUser } from "@/lib/session";
 
 export default async function UserDetailPage({
@@ -83,6 +84,12 @@ export default async function UserDetailPage({
             <dt>会うことについて</dt>
             <dd>{user.wantMeetup ? "前向き" : "オンラインのみ希望"}</dd>
           </div>
+          <div className="meta-item">
+            <dt>アプリ内通話</dt>
+            <dd style={{ fontSize: user.acceptCalls ? undefined : "0.84rem" }}>
+              {user.acceptCalls ? `${user.callFromHour}:00〜${user.callToHour}:00` : "受け付けていません"}
+            </dd>
+          </div>
         </dl>
 
         {user.bio && (
@@ -133,6 +140,8 @@ export default async function UserDetailPage({
       </div>
 
       <p className="footnote">
+        {callHoursLabel(user)}。通話はマッチが成立してからトーク画面で始められます。電話番号は交換されません。
+        <br />
         プロフィールに書かれている内容は本人の申告です。医療的な判断は必ず主治医にご相談ください。
       </p>
     </main>

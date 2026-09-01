@@ -155,6 +155,7 @@ export const REPORT_REASONS = [
   { id: "spam", label: "宣伝・勧誘・スパム" },
   { id: "medical", label: "根拠のない医療アドバイス" },
   { id: "harassment", label: "攻撃的・不快な言動" },
+  { id: "call_trouble", label: "通話でのトラブル" },
   { id: "impersonation", label: "妊婦ではない / なりすまし" },
   { id: "commercial", label: "商品・サービスの売り込み" },
   { id: "other", label: "その他" },
