@@ -8,6 +8,15 @@ import { serializeInterests } from "./interests";
 import { hasErrors, readProfileForm, validateProfile, type FieldErrors } from "./validation";
 import { REPORT_REASONS } from "./constants";
 import { endCallsBetween } from "./calls";
+import {
+  EVIDENCE_DIR,
+  approveRequest,
+  isAdmin,
+  rejectRequest,
+  submitBoshiTechoRequest,
+  verifiedGateAllows,
+  verifyByMynaPortal,
+} from "./verification";
 
 export type FormState = {
   ok: boolean;
@@ -150,6 +159,9 @@ export async function sendLike(form: FormData) {
     },
   });
   if (blocked) redirect(from);
+
+  // 「認証済みの人としかマッチしない」設定を、いいねの時点でも効かせる
+  if (!verifiedGateAllows(me, target)) redirect(from);
 
   await prisma.like.upsert({
     where: { senderId_receiverId: { senderId: me.id, receiverId: targetId } },
@@ -328,4 +340,100 @@ export async function unblockUser(form: FormData) {
   revalidatePath("/mypage");
   revalidatePath("/discover");
   redirect("/mypage?unblocked=1");
+}
+
+
+/* ------------------------------ 妊婦確認 ------------------------------ */
+
+/**
+ * マイナポータル連携（プロトタイプではモック）。
+ *
+ * 本番では、マイナポータルの自己情報取得APIで自治体が持つ妊婦健診情報を取得し、
+ * その中の分娩予定日で確認する。ここではその結果が返ってきたことにして、
+ * 本人が登録した出産予定日をそのまま確認済みの値として扱っている。
+ * 画像を受け取らないので、氏名・住所を集めずに済むのがこの方式の要点。
+ */
+export async function linkMynaPortal() {
+  const me = await requireUser();
+  await verifyByMynaPortal(me, me.dueDate);
+  revalidatePath("/verify");
+  revalidatePath("/mypage");
+  revalidatePath("/discover");
+  redirect("/verify?done=myna");
+}
+
+const EVIDENCE_MAX_BYTES = 8 * 1024 * 1024;
+const EVIDENCE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic"];
+
+/** 母子健康手帳の「出産予定日のページ」を提出して審査待ちに入れる */
+export async function submitBoshiTecho(
+  _prev: FormState = EMPTY,
+  form: FormData,
+): Promise<FormState> {
+  const me = await requireUser();
+
+  if (form.get("masked") !== "on") {
+    return { ok: false, message: "氏名・住所を隠したことを確認してください" };
+  }
+
+  const file = form.get("evidence");
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, message: "画像を選んでください" };
+  }
+  if (file.size > EVIDENCE_MAX_BYTES) {
+    return { ok: false, message: "画像が大きすぎます（8MBまで）" };
+  }
+  if (!EVIDENCE_TYPES.includes(file.type)) {
+    return { ok: false, message: "画像ファイル（JPEG / PNG / WebP / HEIC）を選んでください" };
+  }
+
+  const { mkdir, writeFile } = await import("node:fs/promises");
+  await mkdir(EVIDENCE_DIR, { recursive: true });
+  const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+  const name = `${me.id}-${Date.now()}.${ext}`;
+  await writeFile(`${EVIDENCE_DIR}/${name}`, Buffer.from(await file.arrayBuffer()));
+
+  await submitBoshiTechoRequest(me, name, me.dueDate);
+
+  revalidatePath("/verify");
+  revalidatePath("/mypage");
+  redirect("/verify?done=submitted");
+}
+
+/** 「認証済みの人としかマッチしない」設定の切り替え */
+export async function setRequireVerifiedMatch(form: FormData) {
+  const me = await requireUser();
+  const value = form.get("value") === "on";
+  await prisma.user.update({
+    where: { id: me.id },
+    data: { requireVerifiedMatch: value },
+  });
+  revalidatePath("/mypage");
+  revalidatePath("/discover");
+  redirect(`/mypage?verified_only=${value ? "on" : "off"}`);
+}
+
+/* ------------------------------ 審査（運営） ----------------------------- */
+
+async function requireAdmin() {
+  const me = await requireUser();
+  if (!isAdmin(me)) redirect("/discover");
+  return me;
+}
+
+export async function adminApproveVerification(form: FormData) {
+  await requireAdmin();
+  await approveRequest(String(form.get("requestId") ?? ""));
+  revalidatePath("/admin/verifications");
+  redirect("/admin/verifications?done=approved");
+}
+
+export async function adminRejectVerification(form: FormData) {
+  await requireAdmin();
+  await rejectRequest(
+    String(form.get("requestId") ?? ""),
+    String(form.get("reason") ?? "確認できませんでした"),
+  );
+  revalidatePath("/admin/verifications");
+  redirect("/admin/verifications?done=rejected");
 }

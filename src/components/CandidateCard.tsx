@@ -6,6 +6,7 @@ import { TagList } from "./TagList";
 import { cancelLike, passLike, sendLike } from "@/lib/actions";
 import { BIRTH_ORDER_LABEL } from "@/lib/constants";
 import { dueInLabel, pregnancyStage } from "@/lib/pregnancy";
+import { isVerified } from "@/lib/verification";
 import { scoreLabel, type MatchScore } from "@/lib/matching";
 
 export function CandidateCard({
@@ -33,6 +34,7 @@ export function CandidateCard({
             <ScoreRing score={match.score} />
           </div>
           <div className="wrap" style={{ marginTop: 4 }}>
+            {isVerified(user) && <span className="badge badge-primary">✓ 妊婦確認済み</span>}
             <span className="badge badge-primary">{stage.label}</span>
             <span className="badge">{stage.trimesterLabel}</span>
             <span className="badge badge-outline">{dueInLabel(user.dueDate)}</span>

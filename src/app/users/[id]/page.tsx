@@ -11,6 +11,7 @@ import { scoreLabel, scoreMatch } from "@/lib/matching";
 import { dueInLabel, dueMonthLabel, pregnancyStage } from "@/lib/pregnancy";
 import { getVisibleUser } from "@/lib/queries";
 import { callHoursLabel } from "@/lib/calls";
+import { isVerified } from "@/lib/verification";
 import { requireUser } from "@/lib/session";
 
 export default async function UserDetailPage({
@@ -38,6 +39,11 @@ export default async function UserDetailPage({
           <Avatar seed={user.avatarSeed} name={user.nickname} size={66} />
           <div className="grow">
             <h1 className="profile-name">{user.nickname}</h1>
+            {isVerified(user) && (
+              <span className="badge badge-primary" style={{ marginBottom: 2 }}>
+                ✓ 妊婦確認済み
+              </span>
+            )}
             <p className="muted" style={{ margin: 0, fontSize: "0.86rem" }}>
               {user.prefecture} {user.city}
             </p>
@@ -83,6 +89,10 @@ export default async function UserDetailPage({
           <div className="meta-item">
             <dt>会うことについて</dt>
             <dd>{user.wantMeetup ? "前向き" : "オンラインのみ希望"}</dd>
+          </div>
+          <div className="meta-item">
+            <dt>妊婦確認</dt>
+            <dd style={{ fontSize: "0.9rem" }}>{isVerified(user) ? "確認済み" : "未確認"}</dd>
           </div>
           <div className="meta-item">
             <dt>アプリ内通話</dt>

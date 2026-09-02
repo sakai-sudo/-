@@ -2,12 +2,25 @@ import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { ProfileForm } from "@/components/ProfileForm";
 import { WeekBar } from "@/components/WeekBar";
-import { deactivateAccount, logOut, unblockUser, updateProfile } from "@/lib/actions";
+import {
+  deactivateAccount,
+  logOut,
+  setRequireVerifiedMatch,
+  unblockUser,
+  updateProfile,
+} from "@/lib/actions";
 import { prisma } from "@/lib/db";
 import { parseInterests } from "@/lib/interests";
 import { dueInLabel, pregnancyStage } from "@/lib/pregnancy";
 import { getCounts } from "@/lib/queries";
 import { requireUser } from "@/lib/session";
+import {
+  VERIFICATION_METHOD_LABEL,
+  expireStaleVerifications,
+  isAdmin,
+  isVerified,
+  verificationLabel,
+} from "@/lib/verification";
 
 export const metadata = { title: "マイページ — マタマッチ" };
 
@@ -21,11 +34,13 @@ function toDateInput(date: Date): string {
 export default async function MyPage({
   searchParams,
 }: {
-  searchParams: Promise<{ unblocked?: string }>;
+  searchParams: Promise<{ unblocked?: string; verified_only?: string }>;
 }) {
+  await expireStaleVerifications();
   const me = await requireUser();
   const params = await searchParams;
   const stage = pregnancyStage(me.dueDate);
+  const verified = isVerified(me);
   const counts = await getCounts(me);
   const blocks = await prisma.block.findMany({
     where: { blockerId: me.id },
@@ -40,6 +55,16 @@ export default async function MyPage({
       {params.unblocked && (
         <p className="notice notice-ok" role="status">
           ブロックを解除しました。
+        </p>
+      )}
+      {params.verified_only === "on" && (
+        <p className="notice notice-ok" role="status">
+          確認済みの方だけを表示するようにしました。
+        </p>
+      )}
+      {params.verified_only === "off" && (
+        <p className="notice notice-info" role="status">
+          確認済みかどうかで絞らないようにしました。
         </p>
       )}
 
@@ -74,6 +99,63 @@ export default async function MyPage({
             </dd>
           </div>
         </div>
+      </div>
+
+      {/* ------------------------------ 妊婦確認 ------------------------------ */}
+      <div className="section-title">
+        <h2>妊婦確認</h2>
+      </div>
+      <div className="card">
+        <div className="row-between">
+          <div>
+            <strong>{verificationLabel(me)}</strong>
+            {verified && me.verificationMethod && (
+              <div className="hint">
+                {VERIFICATION_METHOD_LABEL[me.verificationMethod]}で確認
+                {me.verificationExpiresAt
+                  ? ` ・ ${me.verificationExpiresAt.getMonth() + 1}月${me.verificationExpiresAt.getDate()}日まで有効`
+                  : ""}
+              </div>
+            )}
+          </div>
+          {verified ? (
+            <span className="badge badge-primary">✓</span>
+          ) : (
+            <Link href="/verify" className="btn btn-sm">
+              確認する
+            </Link>
+          )}
+        </div>
+
+        {!verified && (
+          <p className="hint" style={{ marginTop: 10 }}>
+            確認は登録の条件ではありません。済ませると<strong>通話</strong>が使えて、
+            <strong>確認済みの人だけに絞る設定</strong>も選べるようになります。
+          </p>
+        )}
+
+        <hr className="divider" />
+
+        <form action={setRequireVerifiedMatch}>
+          <input type="hidden" name="value" value={me.requireVerifiedMatch ? "off" : "on"} />
+          <div className="row-between">
+            <div className="grow">
+              <strong style={{ fontSize: "0.92rem" }}>確認済みの人としかマッチしない</strong>
+              <div className="hint">
+                {verified
+                  ? "オンにすると、妊婦確認が済んだ方だけが表示され、あなたも未確認の方には表示されなくなります。"
+                  : "この設定は、あなたの妊婦確認が済んでから選べます。"}
+              </div>
+            </div>
+            <button
+              className={me.requireVerifiedMatch ? "btn btn-sm" : "btn btn-ghost btn-sm"}
+              type="submit"
+              disabled={!verified}
+            >
+              {me.requireVerifiedMatch ? "オン" : "オフ"}
+            </button>
+          </div>
+        </form>
       </div>
 
       <div className="section-title">
@@ -134,6 +216,11 @@ export default async function MyPage({
         <p className="muted" style={{ margin: 0, fontSize: "0.84rem" }}>
           ログイン用メールアドレス: {me.email}
         </p>
+        {isAdmin(me) && (
+          <Link href="/admin/verifications" className="btn btn-soft btn-block">
+            妊婦確認の審査（運営）
+          </Link>
+        )}
         <form action={logOut}>
           <button className="btn btn-ghost btn-block" type="submit">
             ログアウト

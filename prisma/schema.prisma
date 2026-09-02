@@ -15,17 +15,28 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  nickname     String
-  dueDate      DateTime // 出産予定日（週数算出用。他ユーザーには週数のみ公開）
-  prefecture   String
-  city         String
-  birthOrder   String // "first" = 初産 / "experienced" = 経産
-  ageGroup     String // constants.ts の AGE_GROUPS の id
-  interests    String   @default("") // タグ id のカンマ区切り
-  bio          String   @default("")
-  wantMeetup   Boolean  @default(false) // オフラインで会うことに前向きか
+  id                    String    @id @default(cuid())
+  email                 String    @unique
+  nickname              String
+  dueDate               DateTime // 出産予定日（週数算出用。他ユーザーには週数のみ公開）
+  prefecture            String
+  city                  String
+  birthOrder            String // "first" = 初産 / "experienced" = 経産
+  /// constants.ts の AGE_GROUPS の id。登録時は任意なので空文字になりうる
+  ageGroup              String    @default("")
+  interests             String    @default("") // タグ id のカンマ区切り
+  bio                   String    @default("")
+  wantMeetup            Boolean   @default(false) // オフラインで会うことに前向きか
+  /// 妊婦であることの確認。none | pending | verified | expired | rejected
+  verificationStatus    String    @default("none")
+  /// "myna"（マイナポータル連携）| "boshi_techo"（母子健康手帳）| "clinic"（産院連携）
+  verificationMethod    String?
+  verifiedAt            DateTime?
+  /// 出産予定日 + 8週で失効させ、産後モードへ移行させる
+  verificationExpiresAt DateTime?
+  /// 認証済みの相手としかマッチしない
+  requireVerifiedMatch  Boolean   @default(false)
+
   acceptCalls  Boolean  @default(true) // アプリ内通話を受け付けるか
   callFromHour Int      @default(10) // 通話を受け付ける時間帯（開始・24時間表記）
   callToHour   Int      @default(21) // 通話を受け付ける時間帯（終了）
@@ -34,18 +45,20 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  sentLikes     Like[]    @relation("likeSender")
-  receivedLikes Like[]    @relation("likeReceiver")
-  matchesAsA    Match[]   @relation("matchUserA")
-  matchesAsB    Match[]   @relation("matchUserB")
+  sentLikes     Like[]                @relation("likeSender")
+  receivedLikes Like[]                @relation("likeReceiver")
+  matchesAsA    Match[]               @relation("matchUserA")
+  matchesAsB    Match[]               @relation("matchUserB")
   messages      Message[]
-  blocksMade    Block[]   @relation("blocker")
-  blocksAgainst Block[]   @relation("blocked")
-  reportsMade   Report[]  @relation("reporter")
-  callsMade     Call[]    @relation("callCaller")
-  callsReceived Call[]    @relation("callCallee")
+  blocksMade    Block[]               @relation("blocker")
+  blocksAgainst Block[]               @relation("blocked")
+  reportsMade   Report[]              @relation("reporter")
+  callsMade     Call[]                @relation("callCaller")
+  callsReceived Call[]                @relation("callCallee")
+  verifications VerificationRequest[]
 
   @@index([prefecture])
+  @@index([verificationStatus])
 }
 
 /// 片方向の「いいね」。相互になった時点で Match を作る
@@ -156,4 +169,29 @@ model CallSignal {
   call Call @relation(fields: [callId], references: [id], onDelete: Cascade)
 
   @@index([callId, id])
+}
+
+/// 妊婦確認の審査キュー。
+///
+/// 個人情報の扱い（重要）:
+///   - 母子健康手帳の画像は「出産予定日が載ったページ1枚のみ・氏名と住所はマスキング」で提出させる
+///   - 画像は公開ディレクトリの外に一時保存し、**審査の結果が出た時点で実体ごと削除する**
+///   - 審査後に残すのは「いつ・どの方法で確認したか」と確認できた出産予定日だけ
+model VerificationRequest {
+  id              String    @id @default(cuid())
+  userId          String
+  method          String // "myna" | "boshi_techo" | "clinic"
+  /// 一時ファイルへの参照。審査完了時に null にし、ファイル本体も削除する
+  evidenceRef     String?
+  /// 本人が申告した出産予定日（審査時に証跡と突き合わせる）
+  declaredDueDate DateTime
+  status          String    @default("pending") // pending | approved | rejected
+  reviewedAt      DateTime?
+  rejectReason    String    @default("")
+  createdAt       DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([userId])
 }

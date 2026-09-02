@@ -26,6 +26,8 @@ type Seed = {
   interests: string[];
   bio: string;
   wantMeetup: boolean;
+  /** "myna" で確認済み、"pending" で審査待ち、未指定なら未確認 */
+  verification?: "myna" | "boshi_techo" | "pending";
   acceptCalls?: boolean;
   callFromHour?: number;
   callToHour?: number;
@@ -35,6 +37,7 @@ const USERS: Seed[] = [
   {
     nickname: "みかん",
     email: "mikan@example.com",
+    verification: "myna",
     dueInDays: 84,
     prefecture: "東京都",
     city: "世田谷区",
@@ -47,6 +50,7 @@ const USERS: Seed[] = [
   {
     nickname: "こむぎ",
     email: "komugi@example.com",
+    verification: "myna",
     dueInDays: 79,
     prefecture: "東京都",
     city: "世田谷区",
@@ -74,6 +78,7 @@ const USERS: Seed[] = [
   {
     nickname: "あおい",
     email: "aoi@example.com",
+    verification: "boshi_techo",
     dueInDays: 72,
     prefecture: "神奈川県",
     city: "川崎市中原区",
@@ -99,6 +104,7 @@ const USERS: Seed[] = [
   {
     nickname: "まる",
     email: "maru@example.com",
+    verification: "myna",
     dueInDays: 88,
     prefecture: "大阪府",
     city: "吹田市",
@@ -111,6 +117,7 @@ const USERS: Seed[] = [
   {
     nickname: "のん",
     email: "non@example.com",
+    verification: "boshi_techo",
     dueInDays: 40,
     prefecture: "東京都",
     city: "世田谷区",
@@ -159,6 +166,7 @@ const USERS: Seed[] = [
   {
     nickname: "ももこ",
     email: "momoko@example.com",
+    verification: "myna",
     dueInDays: 30,
     prefecture: "神奈川県",
     city: "横浜市港北区",
@@ -171,6 +179,7 @@ const USERS: Seed[] = [
   {
     nickname: "しずく",
     email: "shizuku@example.com",
+    verification: "pending",
     dueInDays: 118,
     prefecture: "東京都",
     city: "江東区",
@@ -221,6 +230,7 @@ const USERS: Seed[] = [
   {
     nickname: "あん",
     email: "an@example.com",
+    verification: "myna",
     dueInDays: 92,
     prefecture: "東京都",
     city: "世田谷区",
@@ -245,6 +255,7 @@ const USERS: Seed[] = [
   {
     nickname: "そら",
     email: "sora@example.com",
+    verification: "boshi_techo",
     dueInDays: 14,
     prefecture: "東京都",
     city: "中野区",
@@ -269,6 +280,7 @@ const USERS: Seed[] = [
   {
     nickname: "はな",
     email: "hana@example.com",
+    verification: "myna",
     dueInDays: 76,
     prefecture: "神奈川県",
     city: "川崎市中原区",
@@ -304,6 +316,23 @@ const USERS: Seed[] = [
   },
 ];
 
+const VERIFY_WEEKS_AFTER_DUE = 8;
+
+function verificationFields(u: Seed, dueDate: Date) {
+  if (!u.verification) return {};
+  if (u.verification === "pending") {
+    return { verificationStatus: "pending", verificationMethod: "boshi_techo" };
+  }
+  return {
+    verificationStatus: "verified",
+    verificationMethod: u.verification,
+    verifiedAt: new Date(),
+    verificationExpiresAt: new Date(
+      dueDate.getTime() + VERIFY_WEEKS_AFTER_DUE * 7 * DAY,
+    ),
+  };
+}
+
 function seedFor(email: string): string {
   let h = 0;
   for (let i = 0; i < email.length; i++) h = (h * 33 + email.charCodeAt(i)) % 100000;
@@ -322,11 +351,13 @@ async function main() {
   console.log(`ユーザーを ${USERS.length} 件作成中…`);
   const created = new Map<string, string>();
   for (const u of USERS) {
+    const dueDate = due(u.dueInDays);
     const user = await prisma.user.create({
       data: {
+        ...verificationFields(u, dueDate),
         email: u.email,
         nickname: u.nickname,
-        dueDate: due(u.dueInDays),
+        dueDate,
         prefecture: u.prefecture,
         city: u.city,
         birthOrder: u.birthOrder,

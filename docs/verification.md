@@ -1,5 +1,10 @@
 # 妊婦であることの確認（本人確認）の設計
 
+> **実装状況（このリポジトリ）**
+> フロー全体（申請 → 審査 → バッジ → 有効期限で失効）と、下記の「段階的に開ける設計」は実装済み。
+> マイナポータル連携（方法A）は **`/verify/myna` のモック画面**で、実際のAPIには接続していない。
+> 母子健康手帳（方法B）は撮影ガイド・一時保存・審査後の削除まで動く。産院連携（方法C）は未着手。
+
 このアプリの安全性は「参加者が本当に妊婦である」ことに全面的に依存している。ここが崩れると、勧誘・なりすまし・性的な目的の侵入をどれだけ通報機能で受けても追いつかない。**本番公開の前提条件**であり、方式を決めないまま出してはいけない。
 
 ---
@@ -84,32 +89,23 @@
 
 ---
 
-## 実装するときのデータモデル案
+## データモデル（実装済み）
 
-```prisma
-model User {
-  // ...既存
-  verificationStatus String    @default("none")  // none | pending | verified | expired | rejected
-  verificationMethod String?                     // "myna" | "boshi_techo" | "clinic"
-  verifiedAt         DateTime?
-  verificationExpiresAt DateTime?                // 出産予定日 + 8週
-  requireVerifiedMatch  Boolean @default(false)  // 認証済みの相手としかマッチしない
-}
+`prisma/schema.prisma` の `User` に確認の状態を持ち、審査は `VerificationRequest` のキューで回す。実装は `src/lib/verification.ts`。
 
-/// 審査キュー。画像は保存せず、審査中だけ一時領域に置いて完了時に消す。
-model VerificationRequest {
-  id            String   @id @default(cuid())
-  userId        String
-  method        String
-  /// 一時ファイルの参照。審査完了時に null にし、実体も削除する
-  evidenceRef   String?
-  declaredDueDate DateTime
-  status        String   @default("pending")   // pending | approved | rejected
-  reviewedAt    DateTime?
-  rejectReason  String   @default("")
-  createdAt     DateTime @default(now())
-}
-```
+| フィールド | 用途 |
+|---|---|
+| `verificationStatus` | `none` / `pending` / `verified` / `expired` / `rejected` |
+| `verificationMethod` | `myna` / `boshi_techo` / `clinic` |
+| `verifiedAt` / `verificationExpiresAt` | 確認日と、出産予定日+8週の失効日 |
+| `requireVerifiedMatch` | 確認済みの相手としかマッチしない設定 |
+| `VerificationRequest.evidenceRef` | 一時ファイルへの参照。**判定時に null にし、実体も削除する** |
+
+失効は読み取りのたびに遅延評価している（`expireStaleVerifications`）ので、バッチを持たなくても期限切れが放置されない。
+
+### 絞り込みは必ず双方向に効かせる
+
+`verifiedGateAllows(me, other)` で、**どちらかが「確認済みのみ」をオンにしていれば双方の一覧から相互に消す。** 片側だけに効かせると「いいねしたのに相手からは見えない」という壊れた状態が生まれるため。おすすめ一覧・いいね一覧・プロフィール詳細・いいね送信のすべてで同じ関数を通している。
 
 ---
 
@@ -119,6 +115,14 @@ model VerificationRequest {
 - 本命は**マイナポータルの自己情報取得API**（妊婦健診情報）。画像を受け取らずに済み、確度も高い。対応自治体が限られるので母子手帳方式と併用する。
 - **認証を必須にしない。** 通話と「認証済みのみでマッチ」を認証済みの特典にすることで、入り口を狭めずに安全性を上げる。
 - 認証には**有効期限**を持たせ、産後モードへ自然に移行させる。
+
+## 残っている課題
+
+1. **マイナポータル自己情報取得APIの実装** — 利用にあたっての申請・審査が必要。取得できるのは PMH 事業実施自治体に在籍する利用者のみなので、カバー率の把握も要る。
+2. **産院連携（方法C）** — B2B2C の営業と訪問先が同じなので、そちらと合わせて進める。
+3. **審査の運用** — 現状は `ADMIN_EMAILS` に列挙したアカウントが画面から判定するだけ。件数が増えたら、担当者の権限管理と判定ログが必要。
+4. **画像の保存先** — プロトタイプではローカルの `.verification-tmp/` に置いている。複数インスタンス構成にするなら、短命な署名付きURLを使うオブジェクトストレージ（ライフサイクルルールで自動失効）へ移す。
+5. **再申請の回数制限** — 現状は無制限。総当たりでの突破を防ぐため、回数と間隔の制限を入れる。
 
 ## 出典
 

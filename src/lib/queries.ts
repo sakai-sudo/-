@@ -2,6 +2,7 @@ import type { User } from "@prisma/client";
 import { prisma } from "./db";
 import { scoreMatch, type MatchScore } from "./matching";
 import { regionOf } from "./constants";
+import { expireStaleVerifications, verifiedGateAllows } from "./verification";
 
 export type Candidate = { user: User; match: MatchScore };
 
@@ -58,6 +59,7 @@ export async function getCandidates(
   filters: DiscoverFilters = DEFAULT_FILTERS,
   now = new Date(),
 ): Promise<Candidate[]> {
+  await expireStaleVerifications(now);
   const [blocked, matched, sentLikes] = await Promise.all([
     blockedUserIds(me.id),
     matchedUserIds(me.id),
@@ -96,6 +98,7 @@ export async function getCandidates(
         ? regionOf(u.prefecture) === myRegion
         : true,
     )
+    .filter((u) => verifiedGateAllows(me, u, now))
     .map((user) => ({ user, match: scoreMatch(me, user, now) }))
     .filter((c) =>
       filters.maxWeekDiff > 0 ? c.match.weekDiff <= filters.maxWeekDiff : true,
@@ -126,7 +129,12 @@ export async function getPendingLikes(
   });
 
   return likes
-    .filter((l) => !blocked.has(l.senderId) && !sentTo.has(l.senderId))
+    .filter(
+      (l) =>
+        !blocked.has(l.senderId) &&
+        !sentTo.has(l.senderId) &&
+        verifiedGateAllows(me, l.sender, now),
+    )
     .map((l) => ({ user: l.sender, match: scoreMatch(me, l.sender, now) }));
 }
 
@@ -139,7 +147,7 @@ export async function getSentLikes(me: User, now = new Date()): Promise<Candidat
     orderBy: { createdAt: "desc" },
   });
   return likes
-    .filter((l) => !matched.has(l.receiverId))
+    .filter((l) => !matched.has(l.receiverId) && verifiedGateAllows(me, l.receiver, now))
     .map((l) => ({ user: l.receiver, match: scoreMatch(me, l.receiver, now) }));
 }
 
@@ -215,6 +223,7 @@ export async function getVisibleUser(me: User, userId: string) {
     where: { id: userId, isActive: true },
   });
   if (!user) return null;
+  if (!verifiedGateAllows(me, user)) return null;
 
   const [iLiked, likedMe, existingMatch] = await Promise.all([
     prisma.like.findUnique({

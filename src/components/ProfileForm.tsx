@@ -176,24 +176,30 @@ export function ProfileForm({
         {errors.birthOrder && <span className="error">{errors.birthOrder}</span>}
       </div>
 
-      <div className="field">
-        <span className="label">年代</span>
-        <div className="seg">
-          {AGE_GROUPS.map((a) => (
-            <label key={a.id}>
-              <input
-                type="radio"
-                name="ageGroup"
-                value={a.id}
-                defaultChecked={initial.ageGroup === a.id}
-              />
-              {a.label}
-            </label>
-          ))}
+      {mode === "edit" && (
+        <div className="field">
+          <span className="label">
+            年代 <span className="hint" style={{ fontWeight: 600 }}>（任意）</span>
+          </span>
+          <div className="seg">
+            {AGE_GROUPS.map((a) => (
+              <label key={a.id}>
+                <input
+                  type="radio"
+                  name="ageGroup"
+                  value={a.id}
+                  defaultChecked={initial.ageGroup === a.id}
+                />
+                {a.label}
+              </label>
+            ))}
+          </div>
+          {errors.ageGroup && <span className="error">{errors.ageGroup}</span>}
         </div>
-        {errors.ageGroup && <span className="error">{errors.ageGroup}</span>}
-      </div>
+      )}
 
+      {mode === "edit" && (
+        <>
       <div className="field">
         <span className="label">
           いまの気分・関心タグ
@@ -301,6 +307,20 @@ export function ProfileForm({
         )}
         {errors.callFromHour && <span className="error">{errors.callFromHour}</span>}
       </div>
+        </>
+      )}
+
+      {mode === "signup" && (
+        <>
+          {/* 登録は最小限で終わらせ、残りはあとからマイページで足せるようにしている */}
+          <input type="hidden" name="acceptCalls" value="true" />
+          <input type="hidden" name="callFromHour" value={String(initial.callFromHour)} />
+          <input type="hidden" name="callToHour" value={String(initial.callToHour)} />
+          <p className="notice notice-info">
+            ここまでで登録できます。関心タグや自己紹介は、あとからマイページで足せます（書くほど相性の近い人が見つかりやすくなります）。
+          </p>
+        </>
+      )}
 
       {mode === "signup" && (
         <p className="notice notice-warn">

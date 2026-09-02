@@ -80,7 +80,10 @@ export function validateProfile(
   else if (input.city.length > 30) errors.city = "30文字以内で入力してください";
 
   if (!BIRTH_IDS.has(input.birthOrder)) errors.birthOrder = "選択してください";
-  if (!AGE_IDS.has(input.ageGroup)) errors.ageGroup = "年代を選択してください";
+  // 年代は任意。登録の手数を減らすため、未選択（空文字）を許す
+  if (input.ageGroup && !AGE_IDS.has(input.ageGroup)) {
+    errors.ageGroup = "年代を選択し直してください";
+  }
 
   const valid = input.interests.filter((i) => i in INTEREST_LABEL);
   if (valid.length > MAX_INTERESTS)

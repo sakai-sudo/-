@@ -34,7 +34,7 @@ export default async function MatchDetailPage({
   const query = await searchParams;
   const stage = pregnancyStage(partner.dueDate);
   const score = scoreMatch(me, partner);
-  const availability = callAvailability(partner);
+  const availability = callAvailability(partner, new Date(), me);
 
   const suggestions =
     match.messages.length === 0

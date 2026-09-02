@@ -10,6 +10,7 @@
 import type { Call, User } from "@prisma/client";
 import { prisma } from "./db";
 import { hourInAppTimezone } from "./timezone";
+import { isVerified } from "./verification";
 
 /** 呼び出しを何秒鳴らし続けたら不在着信にするか */
 export const RING_TIMEOUT_SEC = 45;
@@ -21,8 +22,24 @@ export type CallAvailability =
   | { ok: true }
   | { ok: false; reason: string };
 
-/** 相手がいま通話を受け付けられるか */
-export function callAvailability(callee: User, now = new Date()): CallAvailability {
+/**
+ * 相手といま通話できるか。
+ * 声は記録が残らずモデレーションが効かないので、確認済みの人同士に限っている。
+ */
+export function callAvailability(
+  callee: User,
+  now = new Date(),
+  caller?: User,
+): CallAvailability {
+  if (caller && !isVerified(caller, now)) {
+    return {
+      ok: false,
+      reason: "通話には妊婦確認が必要です（マイページから申請できます）",
+    };
+  }
+  if (!isVerified(callee, now)) {
+    return { ok: false, reason: `${callee.nickname}さんは妊婦確認がまだ済んでいません` };
+  }
   if (!callee.acceptCalls) {
     return { ok: false, reason: `${callee.nickname}さんは通話を受け付けていません` };
   }
@@ -115,7 +132,7 @@ export async function createCall(
   const callee = match.userAId === me.id ? match.userB : match.userA;
   if (!callee.isActive) return { ok: false, error: "相手が退会しています" };
 
-  const availability = callAvailability(callee, now);
+  const availability = callAvailability(callee, now, me);
   if (!availability.ok) return { ok: false, error: availability.reason };
 
   // すでに進行中の通話があれば、それに合流させる
