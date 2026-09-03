@@ -15,8 +15,8 @@ import {
   rejectRequest,
   submitBoshiTechoRequest,
   verifiedGateAllows,
-  verifyByMynaPortal,
 } from "./verification";
+import { beginMynaLink } from "./myna/link";
 
 export type FormState = {
   ok: boolean;
@@ -346,20 +346,14 @@ export async function unblockUser(form: FormData) {
 /* ------------------------------ 妊婦確認 ------------------------------ */
 
 /**
- * マイナポータル連携（プロトタイプではモック）。
- *
- * 本番では、マイナポータルの自己情報取得APIで自治体が持つ妊婦健診情報を取得し、
- * その中の分娩予定日で確認する。ここではその結果が返ってきたことにして、
- * 本人が登録した出産予定日をそのまま確認済みの値として扱っている。
- * 画像を受け取らないので、氏名・住所を集めずに済むのがこの方式の要点。
+ * マイナポータルの同意・本人確認の画面へ送り出す。
+ * 戻り先は /verify/myna/callback で、そこで自己情報取得APIを呼んで確認する。
+ * MYNA_MODE=mock のあいだは、認可画面の代わりにアプリ内の擬似同意画面へ飛ぶ。
  */
-export async function linkMynaPortal() {
+export async function startMynaLink() {
   const me = await requireUser();
-  await verifyByMynaPortal(me, me.dueDate);
-  revalidatePath("/verify");
-  revalidatePath("/mypage");
-  revalidatePath("/discover");
-  redirect("/verify?done=myna");
+  const url = await beginMynaLink(me);
+  redirect(url);
 }
 
 const EVIDENCE_MAX_BYTES = 8 * 1024 * 1024;

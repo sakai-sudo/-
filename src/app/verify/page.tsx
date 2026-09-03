@@ -17,11 +17,17 @@ function formatDate(d: Date): string {
 export default async function VerifyPage({
   searchParams,
 }: {
-  searchParams: Promise<{ done?: string }>;
+  searchParams: Promise<{
+    done?: string;
+    due_updated?: string;
+    myna_error?: string;
+    suggest?: string;
+  }>;
 }) {
   await expireStaleVerifications();
   const me = await requireUser();
-  const { done } = await searchParams;
+  const params = await searchParams;
+  const { done } = params;
   const verified = isVerified(me);
 
   return (
@@ -31,6 +37,19 @@ export default async function VerifyPage({
       {done === "myna" && (
         <p className="notice notice-ok" role="status">
           マイナポータル連携で確認できました。ありがとうございます。
+          {params.due_updated === "1" &&
+            " 自治体の記録に合わせて、出産予定日を更新しました。"}
+        </p>
+      )}
+      {params.myna_error && (
+        <p className="notice notice-error" role="status">
+          {params.myna_error}
+          {params.suggest === "boshi" && (
+            <>
+              <br />
+              下の<strong>方法2（母子健康手帳）</strong>でも確認できます。
+            </>
+          )}
         </p>
       )}
       {done === "submitted" && (

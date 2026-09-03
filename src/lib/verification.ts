@@ -79,31 +79,6 @@ async function removeEvidence(evidenceRef: string | null | undefined) {
   await unlink(resolved).catch(() => undefined);
 }
 
-/** マイナポータル連携で確認できた場合（画像は介在しない） */
-export async function verifyByMynaPortal(user: User, verifiedDueDate: Date) {
-  const now = new Date();
-  await prisma.$transaction([
-    prisma.verificationRequest.create({
-      data: {
-        userId: user.id,
-        method: "myna",
-        declaredDueDate: verifiedDueDate,
-        status: "approved",
-        reviewedAt: now,
-      },
-    }),
-    prisma.user.update({
-      where: { id: user.id },
-      data: {
-        verificationStatus: "verified",
-        verificationMethod: "myna",
-        verifiedAt: now,
-        verificationExpiresAt: expiresAtFor(verifiedDueDate),
-      },
-    }),
-  ]);
-}
-
 /** 母子手帳の提出を審査待ちに入れる */
 export async function submitBoshiTechoRequest(
   user: User,

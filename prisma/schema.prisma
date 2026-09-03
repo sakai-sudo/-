@@ -195,3 +195,16 @@ model VerificationRequest {
   @@index([status, createdAt])
   @@index([userId])
 }
+
+/// マイナポータルへ送り出してから戻ってくるまでの一時的な状態（OAuth の state）。
+/// CSRF 対策と、戻り先のユーザー特定のためだけに使い、使ったら消費済みにする。
+model MynaLinkSession {
+  state        String    @id
+  userId       String
+  codeVerifier String
+  createdAt    DateTime  @default(now())
+  expiresAt    DateTime
+  consumedAt   DateTime?
+
+  @@index([expiresAt])
+}
