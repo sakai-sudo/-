@@ -81,3 +81,23 @@
 - 日本: altema.jp（ポケカチ）、snkrdunk.com の記事、Yahoo!オークションの落札相場、gamepedia、pricey.jp
 - 海外: pokeinvest.io、samuraiswordtokyo.com、sportscardinvestor.com、pricecharting.com
 - 税関: customs.go.jp、PwC Japan Tax Update（2026/1/14）
+
+---
+
+## 追記: 30th ミュウツーex FUR（134/103）の売り先判断（2026年9月25日）
+
+| 売り先 | 想定販売価格 | 引かれるもの | 手取り目安 |
+|---|---|---|---|
+| **メルカリ** | 11,000〜13,500円（販売相場 約12,315円） | 手数料10%・送料約230円 | **約10,800円** |
+| eBay（アメリカの買い手） | 約15,000円（100ドル。出品中の価格帯） | 手数料 約17〜20%・国際送料・**米国関税をセラーが負担（DDP）** | 約9,000円 |
+| eBay（TCGplayer上の134ドルで売れた場合） | 約20,000円 | 同上 | 約12,500円（ただし売れる保証なし） |
+| 買取店 | 約7,500円 | なし | 7,500円 |
+
+**判断: メルカリ。** eBayはアカウントの立ち上げの手間と米国向けの関税負担を考えると、1万円台のカードでは手取りが増えない。
+
+### わかった輸出の前提（輸出型を検討するとき用）
+- eBayのトレカ落札手数料: ストア契約なし13.25%／ストア契約あり12.35%、さらに1注文$0.30〜0.40。日本のセラーには海外決済手数料1.35%がかかり、総額は売上の約17〜20%
+- 米国は少額免税（デミニミス）を2025年8月に廃止。2,500ドル以下の米国宛ては**DDP（セラーが関税を負担）**が必須
+- 日本郵便の米国宛ては2026年4月14日に再開。ただし認定事業者（Zonos）のアプリで関税を事前に支払うことが条件
+- 2026年7月以降は日本製品に12.5%の関税がかかると報じられており、**低単価のカードを米国へ1枚ずつ輸出するのはほぼ成立しない**
+- 出典: [トレカジャパン](https://tradecard.jp/articles/howtosell-pokemoncards-ebay)、[日本郵便](https://www.post.japanpost.jp/service/send/oversea/information/2026/0714_01.html)、[ネットショップ担当者フォーラム](https://netshop.impress.co.jp/n/2026/04/20/15944)、[eBay手数料ガイド](https://exponential-ebay-tool.com/blog/getting-started/ebay-fees-guide/)、[pokeka-atari](https://pokeka-atari.jp/expansion/30th-celebration/card/mewtwo-ex/fur)、[PRICE BASE](https://price-base.com/useful/mewtwo-fur-30th-market)
