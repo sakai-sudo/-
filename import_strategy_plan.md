@@ -163,6 +163,7 @@
 ---
 
 ## 関連ファイル
-- `import_calculator.xlsx` — 仕入れ判定・月次計画・取引記録（黄色セルに入力するだけで自動計算）
+- `import_calculator.xlsx` — 監視リスト・仕入れ判定・月次計画・取引記録（黄色セルに入力するだけで自動計算）
+- `card_research_2026-09.md` — 仕入れ候補カードのリサーチ結果（2026年9月）
 - `pokemon_card_strategies.md` — 5つの稼ぎ方の全体像とAIプロンプト集
 - `trade_log_template.csv` — 取引記録のCSV版
